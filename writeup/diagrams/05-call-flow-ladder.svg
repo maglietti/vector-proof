@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="716" viewBox="0 0 760 716" role="img" aria-label="Call flow ladder across five participants: developer, Claude Code, Ollama, the mariadb-shell MCP server, and the MariaDB sandbox. Setup deploys the sandbox. Turn 1 connects, embeds five notes, and inserts them. Turn 2 opens a new connection, embeds a question, and runs a vector query that walks the index and returns the top 2 notes. Cleanup stops and deletes the sandbox.">
+          <defs>
+            <marker id="lad-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="lad-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+<style>
+  :root { --fg: #14232b; --muted: #55666f; --bg: #f6f8f9; --panel: #eaf0f2; --panel-line: #b9c7cd; --accent: #0a6f86; --accent-soft: #d6ecf1; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e3ecef; --muted: #93a6ae; --bg: #0c1519; --panel: #13232a; --panel-line: #34505a; --accent: #4fc3dc; --accent-soft: #0f2f38; } }
+  svg { color: var(--fg); background: var(--bg); }
+  text { fill: currentColor; font: 12px "Public Sans", "Helvetica Neue", Arial, sans-serif; }
+  .mono { font-family: "JetBrains Mono", Menlo, monospace; font-size: 11.5px; }
+  .t { font-weight: 600; font-size: 13px; } .sm { font-size: 11px; }
+  .mut { fill: var(--muted); } .acct { fill: var(--accent); }
+  .box { fill: var(--panel); stroke: var(--panel-line); } .plain { fill: var(--bg); stroke: var(--panel-line); }
+  .accbox { fill: var(--accent-soft); stroke: var(--accent); } .frame { fill: none; stroke: var(--muted); stroke-dasharray: 5 4; }
+  .ln { fill: none; stroke: currentColor; stroke-width: 1.3; } .ret { stroke-dasharray: 5 4; } .acc { stroke: var(--accent); stroke-width: 1.8; }
+  .life { stroke: var(--muted); stroke-dasharray: 2 4; } .band { fill: var(--panel); opacity: 0.55; }
+  .halo { paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+  .mk { fill: currentColor; } .mkacc { fill: var(--accent); }
+</style>
+          <rect class="band" x="0" y="64" width="760" height="114"/>
+          <rect class="band" x="0" y="406" width="760" height="234"/>
+          <text class="sm mut t" x="8" y="78">SETUP</text>
+          <text class="sm mut t" x="8" y="198">TURN 1 · STORE</text>
+          <text class="sm mut t" x="8" y="420">TURN 2 · RECALL ON A NEW CONNECTION</text>
+          <text class="sm mut t" x="8" y="660">CLEANUP</text>
+
+          <line class="life" x1="70" y1="56" x2="70" y2="710"/>
+          <line class="life" x1="225" y1="56" x2="225" y2="710"/>
+          <line class="life" x1="375" y1="56" x2="375" y2="710"/>
+          <line class="life" x1="530" y1="56" x2="530" y2="710"/>
+          <line class="life" x1="685" y1="56" x2="685" y2="710"/>
+          <rect class="box" x="10" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="70" y="32" text-anchor="middle">Developer</text>
+          <text class="sm mut" x="70" y="48" text-anchor="middle">you</text>
+          <rect class="box" x="165" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="225" y="32" text-anchor="middle">Claude Code</text>
+          <text class="sm mut" x="225" y="48" text-anchor="middle">the agent</text>
+          <rect class="plain" x="315" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="375" y="32" text-anchor="middle">Ollama</text>
+          <text class="sm mut" x="375" y="48" text-anchor="middle">embeddings</text>
+          <rect class="box" x="470" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="530" y="32" text-anchor="middle">mariadb-shell</text>
+          <text class="sm mut" x="530" y="48" text-anchor="middle">MCP server</text>
+          <rect class="accbox" x="625" y="14" width="120" height="42" rx="6"/>
+          <text class="t acct" x="685" y="32" text-anchor="middle">MariaDB</text>
+          <text class="sm mut" x="685" y="48" text-anchor="middle">12.3.3 sandbox</text>
+
+          <line class="ln" x1="70" y1="96" x2="223" y2="96" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="147" y="90" text-anchor="middle">run the test</text>
+          <line class="ln" x1="225" y1="120" x2="528" y2="120" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="114" text-anchor="middle">sandbox.deploy(3412, '12.3')</text>
+          <line class="ln" x1="530" y1="144" x2="683" y2="144" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="138" text-anchor="middle">start mariadbd</text>
+          <line class="ln ret" x1="530" y1="168" x2="227" y2="168" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="162" text-anchor="middle">deployed: 12.3.3</text>
+
+          <line class="ln" x1="225" y1="216" x2="528" y2="216" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="210" text-anchor="middle">db.connect(uri)</text>
+          <line class="ln ret" x1="530" y1="240" x2="227" y2="240" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="234" text-anchor="middle">connection id</text>
+          <line class="ln" x1="225" y1="264" x2="373" y2="264" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="258" text-anchor="middle">embed 5 notes</text>
+          <line class="ln ret" x1="375" y1="288" x2="227" y2="288" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="282" text-anchor="middle">5 vectors, 256 dims</text>
+          <line class="ln" x1="225" y1="312" x2="528" y2="312" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="306" text-anchor="middle">execute_sql: INSERT … VEC_FromText(?)</text>
+          <line class="ln" x1="530" y1="336" x2="683" y2="336" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="330" text-anchor="middle">INSERT, index update</text>
+          <line class="ln ret" x1="530" y1="360" x2="227" y2="360" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="354" text-anchor="middle">1 row affected (5 times)</text>
+          <line class="ln" x1="225" y1="384" x2="528" y2="384" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="378" text-anchor="middle">db.close</text>
+
+          <line class="ln" x1="225" y1="438" x2="528" y2="438" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="432" text-anchor="middle">db.connect(uri)</text>
+          <line class="ln ret" x1="530" y1="462" x2="227" y2="462" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="456" text-anchor="middle">new connection id</text>
+          <line class="ln" x1="225" y1="486" x2="373" y2="486" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="480" text-anchor="middle">embed question</text>
+          <line class="ln ret" x1="375" y1="510" x2="227" y2="510" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="504" text-anchor="middle">1 vector</text>
+          <line class="ln" x1="225" y1="534" x2="528" y2="534" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="528" text-anchor="middle">SELECT … ORDER BY VEC_DISTANCE LIMIT 2</text>
+          <line class="ln acc" x1="530" y1="558" x2="683" y2="558" marker-end="url(#lad-acc)"/>
+          <text class="sm acct halo" x="607" y="552" text-anchor="middle">walk the vector index</text>
+          <line class="ln ret" x1="685" y1="582" x2="532" y2="582" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="576" text-anchor="middle">top 2 + distances</text>
+          <line class="ln ret" x1="530" y1="606" x2="227" y2="606" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="600" text-anchor="middle">2 memories</text>
+          <line class="ln" x1="225" y1="630" x2="72" y2="630" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="147" y="624" text-anchor="middle">answer from memory</text>
+
+          <line class="ln" x1="225" y1="678" x2="528" y2="678" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="672" text-anchor="middle">sandbox.stop, sandbox.delete</text>
+          <line class="ln" x1="530" y1="702" x2="683" y2="702" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="696" text-anchor="middle">shut down, remove</text>
+        </svg>

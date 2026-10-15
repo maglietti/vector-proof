@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="310" viewBox="0 0 760 310" role="img" aria-label="Agent loop: receive a task, recall from MariaDB by vector search, reason, act through tool calls, remember by inserting the outcome into MariaDB. An embedding model turns text into vectors for both the recall and the remember steps.">
+          <defs>
+            <marker id="loop-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="loop-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+<style>
+  :root { --fg: #14232b; --muted: #55666f; --bg: #f6f8f9; --panel: #eaf0f2; --panel-line: #b9c7cd; --accent: #0a6f86; --accent-soft: #d6ecf1; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e3ecef; --muted: #93a6ae; --bg: #0c1519; --panel: #13232a; --panel-line: #34505a; --accent: #4fc3dc; --accent-soft: #0f2f38; } }
+  svg { color: var(--fg); background: var(--bg); }
+  text { fill: currentColor; font: 12px "Public Sans", "Helvetica Neue", Arial, sans-serif; }
+  .mono { font-family: "JetBrains Mono", Menlo, monospace; font-size: 11.5px; }
+  .t { font-weight: 600; font-size: 13px; } .sm { font-size: 11px; }
+  .mut { fill: var(--muted); } .acct { fill: var(--accent); }
+  .box { fill: var(--panel); stroke: var(--panel-line); } .plain { fill: var(--bg); stroke: var(--panel-line); }
+  .accbox { fill: var(--accent-soft); stroke: var(--accent); } .frame { fill: none; stroke: var(--muted); stroke-dasharray: 5 4; }
+  .ln { fill: none; stroke: currentColor; stroke-width: 1.3; } .ret { stroke-dasharray: 5 4; } .acc { stroke: var(--accent); stroke-width: 1.8; }
+  .life { stroke: var(--muted); stroke-dasharray: 2 4; } .band { fill: var(--panel); opacity: 0.55; }
+  .halo { paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+  .mk { fill: currentColor; } .mkacc { fill: var(--accent); }
+</style>
+          <rect class="box" x="20" y="40" width="160" height="56" rx="6"/>
+          <text class="t" x="100" y="64" text-anchor="middle">1  Receive task</text>
+          <text class="sm mut" x="100" y="82" text-anchor="middle">user or another agent</text>
+          <rect class="box" x="300" y="40" width="160" height="56" rx="6"/>
+          <text class="t" x="380" y="64" text-anchor="middle">2  Recall</text>
+          <text class="sm mut" x="380" y="82" text-anchor="middle">search past notes</text>
+          <rect class="box" x="580" y="40" width="160" height="56" rx="6"/>
+          <text class="t" x="660" y="64" text-anchor="middle">3  Reason</text>
+          <text class="sm mut" x="660" y="82" text-anchor="middle">LLM with recalled notes</text>
+          <rect class="box" x="580" y="234" width="160" height="56" rx="6"/>
+          <text class="t" x="660" y="258" text-anchor="middle">4  Act</text>
+          <text class="sm mut" x="660" y="276" text-anchor="middle">tool calls over MCP</text>
+          <rect class="box" x="300" y="234" width="160" height="56" rx="6"/>
+          <text class="t" x="380" y="258" text-anchor="middle">5  Remember</text>
+          <text class="sm mut" x="380" y="276" text-anchor="middle">store what was learned</text>
+          <rect class="accbox" x="300" y="140" width="160" height="56" rx="6"/>
+          <text class="t acct" x="380" y="164" text-anchor="middle">MariaDB</text>
+          <text class="sm mono" x="380" y="182" text-anchor="middle">agent_memory</text>
+          <rect class="plain" x="60" y="140" width="160" height="56" rx="6"/>
+          <text class="t" x="140" y="164" text-anchor="middle">Embedding model</text>
+          <text class="sm mut" x="140" y="182" text-anchor="middle">text to vector</text>
+          <line class="ln" x1="180" y1="68" x2="298" y2="68" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="239" y="61" text-anchor="middle">task</text>
+          <line class="ln" x1="460" y1="68" x2="578" y2="68" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="519" y="61" text-anchor="middle">top-k notes</text>
+          <line class="ln" x1="660" y1="96" x2="660" y2="232" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="668" y="168">plan</text>
+          <line class="ln" x1="580" y1="262" x2="462" y2="262" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="521" y="255" text-anchor="middle">outcome</text>
+          <path class="ln ret" d="M300,262 H36 V98" marker-end="url(#loop-a)"/>
+          <text class="sm halo mut" x="168" y="255" text-anchor="middle">next task</text>
+          <line class="ln acc" x1="360" y1="96" x2="360" y2="138" marker-end="url(#loop-acc)"/>
+          <text class="sm mono halo" x="368" y="122">ORDER BY VEC_DISTANCE</text>
+          <line class="ln acc" x1="380" y1="234" x2="380" y2="198" marker-end="url(#loop-acc)"/>
+          <text class="sm mono halo" x="388" y="220">INSERT</text>
+          <line class="ln" x1="220" y1="150" x2="298" y2="92" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="252" y="114" text-anchor="middle">vector</text>
+          <line class="ln" x1="220" y1="186" x2="298" y2="238" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="252" y="222" text-anchor="middle">vector</text>
+        </svg>

@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" aria-label="Schema: the agent_memory table has id, agent_id, note, and a VECTOR embedding column, plus two invisible timestamp columns added by system versioning. The primary key indexes id. One vector index covers the embedding of both current rows and history rows; queries filter by row_end or AS OF time while they walk that index.">
+          <defs>
+            <marker id="sch-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="sch-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+<style>
+  :root { --fg: #14232b; --muted: #55666f; --bg: #f6f8f9; --panel: #eaf0f2; --panel-line: #b9c7cd; --accent: #0a6f86; --accent-soft: #d6ecf1; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e3ecef; --muted: #93a6ae; --bg: #0c1519; --panel: #13232a; --panel-line: #34505a; --accent: #4fc3dc; --accent-soft: #0f2f38; } }
+  svg { color: var(--fg); background: var(--bg); }
+  text { fill: currentColor; font: 12px "Public Sans", "Helvetica Neue", Arial, sans-serif; }
+  .mono { font-family: "JetBrains Mono", Menlo, monospace; font-size: 11.5px; }
+  .t { font-weight: 600; font-size: 13px; } .sm { font-size: 11px; }
+  .mut { fill: var(--muted); } .acct { fill: var(--accent); }
+  .box { fill: var(--panel); stroke: var(--panel-line); } .plain { fill: var(--bg); stroke: var(--panel-line); }
+  .accbox { fill: var(--accent-soft); stroke: var(--accent); } .frame { fill: none; stroke: var(--muted); stroke-dasharray: 5 4; }
+  .ln { fill: none; stroke: currentColor; stroke-width: 1.3; } .ret { stroke-dasharray: 5 4; } .acc { stroke: var(--accent); stroke-width: 1.8; }
+  .life { stroke: var(--muted); stroke-dasharray: 2 4; } .band { fill: var(--panel); opacity: 0.55; }
+  .halo { paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+  .mk { fill: currentColor; } .mkacc { fill: var(--accent); }
+</style>
+          <rect class="box" x="20" y="20" width="320" height="214" rx="6"/>
+          <text class="mono t" x="32" y="42">agent_memory</text>
+          <text class="sm mono mut" x="328" y="42" text-anchor="end">WITH SYSTEM VERSIONING</text>
+          <rect class="accbox" x="21" y="144" width="318" height="30"/>
+          <line class="ln" x1="20" y1="54" x2="340" y2="54" stroke="#b9c7cd"/>
+          <line class="ln" x1="20" y1="84" x2="340" y2="84" stroke="#b9c7cd"/>
+          <line class="ln" x1="20" y1="114" x2="340" y2="114" stroke="#b9c7cd"/>
+          <line class="ln" x1="20" y1="144" x2="340" y2="144" stroke="#b9c7cd"/>
+          <line class="ln" x1="20" y1="174" x2="340" y2="174" stroke="#b9c7cd"/>
+          <line class="ln" x1="20" y1="204" x2="340" y2="204" stroke="#b9c7cd"/>
+          <text class="mono" x="32" y="74">id</text><text class="mono mut" x="150" y="74">BIGINT UNSIGNED</text><text class="sm mono" x="328" y="74" text-anchor="end">PK</text>
+          <text class="mono" x="32" y="104">agent_id</text><text class="mono mut" x="150" y="104">VARCHAR(64)</text>
+          <text class="mono" x="32" y="134">note</text><text class="mono mut" x="150" y="134">TEXT</text>
+          <text class="mono acct" x="32" y="164">embedding</text><text class="mono acct" x="150" y="164">VECTOR(n)</text>
+          <text class="mono mut" x="32" y="194">row_start</text><text class="mono mut" x="150" y="194">TIMESTAMP(6)</text><text class="sm mut" x="328" y="194" text-anchor="end">invisible</text>
+          <text class="mono mut" x="32" y="224">row_end</text><text class="mono mut" x="150" y="224">TIMESTAMP(6)</text><text class="sm mut" x="328" y="224" text-anchor="end">invisible</text>
+
+          <rect class="plain" x="440" y="50" width="300" height="40" rx="4"/>
+          <text class="mono" x="590" y="67" text-anchor="middle">PRIMARY KEY (id)</text>
+          <text class="sm mut" x="590" y="82" text-anchor="middle">B-tree</text>
+          <line class="ln" x1="340" y1="69" x2="438" y2="69" marker-end="url(#sch-a)"/>
+
+          <rect class="accbox" x="440" y="130" width="300" height="50" rx="4"/>
+          <text class="mono t acct" x="590" y="150" text-anchor="middle">VECTOR INDEX (embedding)</text>
+          <text class="sm" x="590" y="168" text-anchor="middle">MHNSW graph · DISTANCE=cosine · M=16</text>
+          <line class="ln acc" x1="340" y1="159" x2="438" y2="159" marker-end="url(#sch-acc)"/>
+
+          <rect class="box" x="440" y="230" width="140" height="44" rx="4"/>
+          <text class="sm" x="510" y="248" text-anchor="middle">current rows</text>
+          <text class="sm mono mut" x="510" y="264" text-anchor="middle">row_end = max</text>
+          <rect class="frame" x="600" y="230" width="140" height="44" rx="4"/>
+          <text class="sm" x="670" y="248" text-anchor="middle">history rows</text>
+          <text class="sm mono mut" x="670" y="264" text-anchor="middle">row_end = replaced</text>
+          <line class="ln acc" x1="510" y1="230" x2="510" y2="182" marker-end="url(#sch-acc)"/>
+          <line class="ln acc" x1="670" y1="230" x2="670" y2="182" marker-end="url(#sch-acc)"/>
+          <text class="sm acct halo" x="590" y="210" text-anchor="middle">one graph</text>
+
+          <text class="sm" x="510" y="298" text-anchor="middle">current query</text>
+          <text class="sm mono mut" x="510" y="314" text-anchor="middle">keeps row_end = max</text>
+          <text class="sm" x="670" y="298" text-anchor="middle">AS OF T</text>
+          <text class="sm mono mut" x="670" y="314" text-anchor="middle">row_start ≤ T &lt; row_end</text>
+        </svg>

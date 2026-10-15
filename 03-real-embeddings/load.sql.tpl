@@ -1,0 +1,16 @@
+CREATE DATABASE IF NOT EXISTS scale;
+USE scale;
+DROP TABLE IF EXISTS TBL, q_TBL;
+CREATE TABLE TBL (
+  id INT UNSIGNED PRIMARY KEY,
+  agent_id VARCHAR(64) NOT NULL,
+  note VARCHAR(255) NOT NULL,
+  embedding VECTOR(DIM) NOT NULL
+);
+CREATE TABLE q_TBL (qid INT PRIMARY KEY, v VECTOR(DIM) NOT NULL);
+LOAD DATA LOCAL INFILE 'load/TBL-rows.tsv' INTO TABLE TBL
+  FIELDS TERMINATED BY '\t' (id, agent_id, note, @h) SET embedding = UNHEX(@h);
+LOAD DATA LOCAL INFILE 'load/TBL-queries.tsv' INTO TABLE q_TBL
+  FIELDS TERMINATED BY '\t' (qid, @h) SET v = UNHEX(@h);
+SELECT VERSION(), 'TBL' AS dataset, (SELECT COUNT(*) FROM TBL) AS row_count, (SELECT COUNT(*) FROM q_TBL) AS queries,
+  @@mhnsw_max_cache_size AS vector_cache;

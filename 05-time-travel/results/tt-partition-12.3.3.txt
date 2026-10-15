@@ -1,0 +1,15 @@
++----------------+
+| VERSION()      |
++----------------+
+| 12.3.3-MariaDB |
++----------------+
+--------------
+CREATE TABLE mem_vp (
+  id INT UNSIGNED PRIMARY KEY,
+  embedding VECTOR(3) NOT NULL,
+  VECTOR INDEX (embedding) DISTANCE=cosine
+) WITH SYSTEM VERSIONING
+  PARTITION BY SYSTEM_TIME (PARTITION p_hist HISTORY, PARTITION p_cur CURRENT)
+--------------
+
+ERROR 1506 (HY000) at line 3: Partitioned tables do not support VECTOR

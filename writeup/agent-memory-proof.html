@@ -1,0 +1,997 @@
+<title>Agent Memory in One Table</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; terminal blocks are the proof; an evidence log closes the page as a status-tagged list. */
+:root {
+  --bg: #f6f8f9;
+  --fg: #14232b;
+  --muted: #55666f;
+  --rule: #d5dee2;
+  --term-bg: #0f1d24;
+  --term-fg: #d8e6ea;
+  --term-dim: #7f99a3;
+  --accent: #0a6f86;
+  --pass: #1d7a4b;
+  --pass-bg: #e3f2ea;
+  --warn: #8a5a00;
+  --warn-bg: #fbefd6;
+  --open: #4b5a63;
+  --open-bg: #e6ecef;
+  --panel: #eaf0f2;
+  --panel-line: #b9c7cd;
+  --accent-soft: #d6ecf1;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Public Sans", "Helvetica Neue", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0c1519; --fg: #e3ecef; --muted: #93a6ae; --rule: #22343b;
+  --term-bg: #060d10; --term-fg: #d8e6ea; --term-dim: #6f8a94;
+  --accent: #4fc3dc; --pass: #6fd39d; --pass-bg: #12291e;
+  --warn: #f0c060; --warn-bg: #2e2410; --open: #b3c3ca; --open-bg: #1c2a30;
+  --panel: #13232a; --panel-line: #34505a; --accent-soft: #0f2f38; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0c1519; --fg: #e3ecef; --muted: #93a6ae; --rule: #22343b;
+  --term-bg: #060d10; --term-fg: #d8e6ea; --term-dim: #6f8a94;
+  --accent: #4fc3dc; --pass: #6fd39d; --pass-bg: #12291e;
+  --warn: #f0c060; --warn-bg: #2e2410; --open: #b3c3ca; --open-bg: #1c2a30;
+  --panel: #13232a; --panel-line: #34505a; --accent-soft: #0f2f38; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font: 16px/1.6 var(--body); padding: 0 16px; }
+main { max-width: 760px; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 44px; }
+section { display: grid; gap: 14px; min-width: 0; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 6vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.4rem; font-weight: 600; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--accent); }
+.eyebrow { font: 600 0.75rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); }
+.lede { font-size: 1.15rem; color: var(--muted); }
+.tag { font-family: var(--display); font-weight: 600; font-size: 1.25rem; border-left: 3px solid var(--accent); padding-left: 14px; }
+code { font-family: var(--mono); font-size: 0.9em; }
+.small { font-size: 0.9rem; color: var(--muted); }
+
+.term { background: var(--term-bg); color: var(--term-fg); border-radius: 8px; overflow: hidden; }
+.term-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid #ffffff14; font: 0.75rem var(--mono); color: var(--term-dim); }
+.term pre { margin: 0; padding: 16px; overflow-x: auto; font: 0.82rem/1.55 var(--mono); }
+.term .c { color: var(--term-dim); }
+.term .ok { color: #6fd39d; }
+.term .bad { color: #f09a7a; }
+button.copy { font: 600 0.72rem var(--mono); color: var(--term-fg); background: #ffffff12; border: 1px solid #ffffff22; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+button.copy:hover { background: #ffffff22; }
+button.copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.ver { border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.ver strong { font: 600 1rem var(--mono); }
+.ver span.d { color: var(--muted); font-size: 0.9rem; }
+.pill { justify-self: start; font: 600 0.72rem var(--mono); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.pass { color: var(--pass); background: var(--pass-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.pill.open { color: var(--open); background: var(--open-bg); }
+
+ul.facts { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
+.tablewrap { overflow-x: auto; }
+table.dist { border-collapse: collapse; font: 0.85rem var(--mono); font-variant-numeric: tabular-nums; width: 100%; }
+table.dist th, table.dist td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.dist th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+table.dist td.n, table.dist th.n { text-align: right; }
+table.dist tr.hit td:first-child { color: var(--pass); font-weight: 600; }
+table.dist td.good { color: var(--pass); font-weight: 600; }
+table.dist td.bad-cell { color: var(--warn); font-weight: 600; }
+
+.log { display: grid; gap: 0; border-top: 1px solid var(--rule); }
+.item { display: grid; grid-template-columns: 2.2rem 1fr; gap: 4px 12px; padding-block: 16px; border-bottom: 1px solid var(--rule); }
+.item .num { font: 600 0.9rem var(--mono); color: var(--muted); padding-top: 2px; }
+.item .body { display: grid; gap: 8px; min-width: 0; }
+.item .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.item ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+.group { font: 600 0.75rem var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); padding-top: 20px; }
+.files { display: flex; flex-wrap: wrap; gap: 8px; }
+.files a { font: 0.8rem var(--mono); border: 1px solid var(--rule); border-radius: 4px; padding: 3px 8px; text-decoration: none; }
+footer { color: var(--muted); font-size: 0.85rem; }
+
+/* Diagrams: inline SVG themed through the page tokens; wide figures scroll inside their own box on phones. */
+figure.fig { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.figscroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; padding: 12px; background: var(--bg); }
+svg.diag { display: block; width: 100%; min-width: 660px; height: auto; color: var(--fg); }
+svg.diag text { fill: currentColor; font: 12px var(--body); }
+svg.diag .mono { font-family: var(--mono); font-size: 11.5px; }
+svg.diag .t { font-weight: 600; font-size: 13px; }
+svg.diag .sm { font-size: 11px; }
+svg.diag .mut { fill: var(--muted); }
+svg.diag .acct { fill: var(--accent); }
+svg.diag .box { fill: var(--panel); stroke: var(--panel-line); }
+svg.diag .plain { fill: var(--bg); stroke: var(--panel-line); }
+svg.diag .accbox { fill: var(--accent-soft); stroke: var(--accent); }
+svg.diag .frame { fill: none; stroke: var(--muted); stroke-dasharray: 5 4; }
+svg.diag .ln { fill: none; stroke: currentColor; stroke-width: 1.3; }
+svg.diag .ret { stroke-dasharray: 5 4; }
+svg.diag .acc { stroke: var(--accent); stroke-width: 1.8; }
+svg.diag .life { stroke: var(--muted); stroke-dasharray: 2 4; }
+svg.diag .band { fill: var(--panel); opacity: 0.55; }
+svg.diag .halo { paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+svg.diag .mk { fill: currentColor; }
+svg.diag .mkacc { fill: var(--accent); }
+figcaption { font-size: 0.9rem; color: var(--muted); }
+@media (max-width: 480px) { .item { grid-template-columns: 1fr; } }
+</style>
+
+<main>
+  <header style="display:grid;gap:16px">
+    <div class="eyebrow">The Unified Open Database for the Agentic Enterprise</div>
+    <h1>Agent memory in one table, one query, one database</h1>
+    <p class="lede">On Monday, a billing agent learns that refunds over 50 dollars need approval. On Tuesday, a customer asks it for an 80 dollar refund. The right answer depends on one thing: whether the agent can find Monday's note again.</p>
+    <p class="tag">Lead with proof a developer can verify.</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">The problem</div>
+    <h2>An agent is only as good as what it can recall</h2>
+    <p>The usual fix is a second database. Business data stays in the application database, embeddings go to a vector store, and a sync job copies one into the other. Every note now lives in two places, and the copy the agent searches can lag behind the one it wrote.</p>
+    <p>MariaDB keeps the note, the agent that owns it, and its embedding in the same row. Recall is one SQL query against the same server that holds everything else. Every claim on this page comes with the script and the raw output a developer needs to verify it. The page starts with 20 lines of SQL and keeps adding load until something gives.</p>
+<figure class="fig">
+      <div class="figscroll">
+        <svg class="diag" viewBox="0 0 760 310" role="img" aria-label="Agent loop: receive a task, recall from MariaDB by vector search, reason, act through tool calls, remember by inserting the outcome into MariaDB. An embedding model turns text into vectors for both the recall and the remember steps.">
+          <defs>
+            <marker id="loop-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="loop-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="box" x="20" y="40" width="160" height="56" rx="6"/>
+          <text class="t" x="100" y="64" text-anchor="middle">1  Receive task</text>
+          <text class="sm mut" x="100" y="82" text-anchor="middle">user or another agent</text>
+          <rect class="box" x="300" y="40" width="160" height="56" rx="6"/>
+          <text class="t" x="380" y="64" text-anchor="middle">2  Recall</text>
+          <text class="sm mut" x="380" y="82" text-anchor="middle">search past notes</text>
+          <rect class="box" x="580" y="40" width="160" height="56" rx="6"/>
+          <text class="t" x="660" y="64" text-anchor="middle">3  Reason</text>
+          <text class="sm mut" x="660" y="82" text-anchor="middle">LLM with recalled notes</text>
+          <rect class="box" x="580" y="234" width="160" height="56" rx="6"/>
+          <text class="t" x="660" y="258" text-anchor="middle">4  Act</text>
+          <text class="sm mut" x="660" y="276" text-anchor="middle">tool calls over MCP</text>
+          <rect class="box" x="300" y="234" width="160" height="56" rx="6"/>
+          <text class="t" x="380" y="258" text-anchor="middle">5  Remember</text>
+          <text class="sm mut" x="380" y="276" text-anchor="middle">store what was learned</text>
+          <rect class="accbox" x="300" y="140" width="160" height="56" rx="6"/>
+          <text class="t acct" x="380" y="164" text-anchor="middle">MariaDB</text>
+          <text class="sm mono" x="380" y="182" text-anchor="middle">agent_memory</text>
+          <rect class="plain" x="60" y="140" width="160" height="56" rx="6"/>
+          <text class="t" x="140" y="164" text-anchor="middle">Embedding model</text>
+          <text class="sm mut" x="140" y="182" text-anchor="middle">text to vector</text>
+          <line class="ln" x1="180" y1="68" x2="298" y2="68" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="239" y="61" text-anchor="middle">task</text>
+          <line class="ln" x1="460" y1="68" x2="578" y2="68" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="519" y="61" text-anchor="middle">top-k notes</text>
+          <line class="ln" x1="660" y1="96" x2="660" y2="232" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="668" y="168">plan</text>
+          <line class="ln" x1="580" y1="262" x2="462" y2="262" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="521" y="255" text-anchor="middle">outcome</text>
+          <path class="ln ret" d="M300,262 H36 V98" marker-end="url(#loop-a)"/>
+          <text class="sm halo mut" x="168" y="255" text-anchor="middle">next task</text>
+          <line class="ln acc" x1="360" y1="96" x2="360" y2="138" marker-end="url(#loop-acc)"/>
+          <text class="sm mono halo" x="368" y="122">ORDER BY VEC_DISTANCE</text>
+          <line class="ln acc" x1="380" y1="234" x2="380" y2="198" marker-end="url(#loop-acc)"/>
+          <text class="sm mono halo" x="388" y="220">INSERT</text>
+          <line class="ln" x1="220" y1="150" x2="298" y2="92" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="252" y="114" text-anchor="middle">vector</text>
+          <line class="ln" x1="220" y1="186" x2="298" y2="238" marker-end="url(#loop-a)"/>
+          <text class="sm halo" x="252" y="222" text-anchor="middle">vector</text>
+        </svg>
+      </div>
+      <figcaption>The agent loop. MariaDB sits on two of its edges. Recall reads past notes by vector distance, and the remember step writes each new note back in the same row as its vector. The embedding model, which runs outside the database, produces the vectors for both steps.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="eyebrow">Step 1</div>
+    <h2>Start with 20 lines of SQL</h2>
+    <p>One table, three notes, and one query. The <code>VECTOR(3)</code> column holds each note's embedding, and the <code>VECTOR INDEX</code> lets the server find the closest ones without reading every row. The three-number vectors are written by hand so the answer is easy to check.</p>
+<div class="term">
+      <div class="term-head"><span>agent_memory.sql</span><button class="copy" id="copy-sql" data-target="sql">Copy</button></div>
+<pre id="sql"><span class="c">-- One table holds an agent's notes and their embeddings.</span>
+CREATE TABLE agent_memory (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  agent_id VARCHAR(64) NOT NULL,
+  note TEXT NOT NULL,
+  embedding VECTOR(3) NOT NULL,
+  VECTOR INDEX (embedding) DISTANCE=cosine
+);
+
+INSERT INTO agent_memory (agent_id, note, embedding) VALUES
+  ('billing-agent', 'Refunds over 50 dollars need approval', VEC_FromText('[1, 0, 0]')),
+  ('billing-agent', 'Customer asked for a refund to the original card', VEC_FromText('[0.9, 0.1, 0]')),
+  ('billing-agent', 'Parcel left at the side door', VEC_FromText('[0, 1, 0]'));
+
+<span class="c">-- Retrieve the two notes closest to a query vector.</span>
+SELECT id, note
+FROM agent_memory
+ORDER BY VEC_DISTANCE(embedding, VEC_FromText('[0.95, 0.05, 0]'))
+LIMIT 2;</pre>
+    </div>
+    <p>The query vector points toward "refunds". Both refund notes come back, and the note about a parcel at the side door drops out of the top 2.</p>
+<div class="term">
+      <div class="term-head"><span>mariadb-shell &middot; MariaDB 12.3.3 LTS &middot; 2026-10-15</span></div>
+<pre>+----+--------------------------------------------------+
+| id | note                                             |
++----+--------------------------------------------------+
+|  1 | Refunds over 50 dollars need approval            |
+|  2 | Customer asked for a refund to the original card |
++----+--------------------------------------------------+</pre>
+    </div>
+    <p>The cosine distances show why. Both refund notes sit within 0.002 of the query, while the parcel note is almost a full unit away.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>id</th><th>note</th><th class="n">cosine distance</th></tr></thead>
+        <tbody>
+          <tr class="hit"><td>1</td><td>Refunds over 50 dollars need approval</td><td class="n">0.0014</td></tr>
+          <tr class="hit"><td>2</td><td>Customer asked for a refund to the original card</td><td class="n">0.0017</td></tr>
+          <tr><td>3</td><td>Parcel left at the side door</td><td class="n">0.9474</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The script runs unchanged on MariaDB 11.8.9, 12.3.3, and 13.1.1. A <code>diff</code> of the three raw transcripts differs only in the <code>VERSION()</code> line.</p>
+  </section>
+
+  <section id="step-2">
+    <div class="eyebrow">Step 2</div>
+    <h2>Swap in a real embedding model, and watch one LIMIT decide the refund</h2>
+    <p>Hand-written vectors make the answer easy to check, but real vectors come from an embedding model. Here the embedding model is qwen3-embedding 0.6B, run locally through Ollama. It turns each of the three notes into 1,024 numbers. Then the agent asks Tuesday's question: "Can I refund this customer's 80 dollar charge without asking anyone?"</p>
+    <div class="term">
+      <div class="term-head"><span>MariaDB 12.3.3 &middot; distance from the question to each note</span></div>
+<pre>+----+--------------------------------------------------+--------+
+| id | note                                             | dist   |
++----+--------------------------------------------------+--------+
+|  2 | Customer asked for a refund to the original card | <span class="ok">0.3264</span> |
+|  1 | Refunds over 50 dollars need approval            | 0.3621 |
+|  3 | Parcel left at the side door                     | 0.6217 |
++----+--------------------------------------------------+--------+</pre>
+    </div>
+    <p>Look at the order. The closest note is the customer's request, not the refund rule. To the embedding model, "refund this customer's charge" sounds more like "customer asked for a refund" than like "refunds over 50 dollars need approval". The request wins by 0.036. MariaDB returns exactly that order, and every distance is correct.</p>
+    <p>What happens next depends on how many notes the agent asks for. To find out, each result went to a local LLM (qwen3:4b through Ollama) with the instruction to answer from those notes only. Each version ran 10 times.</p>
+    <div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>the agent's query</th><th>notes the LLM sees</th><th>first answer</th><th class="n">YES / NO in 10 runs</th></tr></thead>
+        <tbody>
+          <tr><td><code>LIMIT 1</code></td><td>Customer asked for a refund to the original card</td><td class="bad-cell"><strong>YES</strong>, refunds 80 dollars with no approval</td><td class="n">3 / 7</td></tr>
+          <tr><td><code>LIMIT 2</code></td><td>the request and the approval rule</td><td class="good"><strong>NO</strong>, asks for approval first</td><td class="n">0 / 10</td></tr>
+          <tr><td>policy lookup plus event lookup</td><td>the approval rule and the request, each labeled</td><td class="good"><strong>NO</strong>, asks for approval first</td><td class="n">0 / 10</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>With <code>LIMIT 1</code>, the approval rule never reaches the agent. The LLM can't follow a rule it can't see, so on its first run it approves the refund on its own:</p>
+    <div class="term">
+      <div class="term-head"><span>qwen3:4b &middot; LIMIT 1 &middot; temperature 0</span></div>
+<pre>The notes state the customer asked for a refund to the original card, but
+do not indicate any requirement to consult others before processing. Since
+the notes provide no restrictions on independent action, the refund can be
+processed without additional approval. <span class="bad">DECISION: YES</span></pre>
+    </div>
+    <p>One more note in the result changes the outcome. With <code>LIMIT 2</code>, the same LLM gets the rule as well and refuses every time:</p>
+    <div class="term">
+      <div class="term-head"><span>qwen3:4b &middot; LIMIT 2 &middot; temperature 0</span></div>
+<pre>The notes state that refunds over 50 dollars require approval. Since the
+customer's charge is 80 dollars (over 50), approval is needed. Therefore,
+the refund cannot be processed without asking for approval. <span class="ok">DECISION: NO</span></pre>
+    </div>
+    <p>So the database didn't make the mistake. It answered the query it was given. The mistake was in the query, because <code>LIMIT 1</code> asks for the single most similar note, and similar isn't the same as relevant. A rule and a request about the same refund look alike to an embedding model, and either one can come out on top.</p>
+    <p>A bigger <code>LIMIT</code> helps, but it only makes the rule likely to show up. The relational half of the table makes it certain. Label each note with its kind, and look up the applicable policy and the latest event as two separate queries. The policy can then never be crowded out by a request that sounds like it:</p>
+    <div class="term">
+      <div class="term-head"><span>MariaDB 12.3.3 &middot; one column, two lookups</span></div>
+<pre>ALTER TABLE agent_memory_real ADD COLUMN kind ENUM('policy', 'event') NOT NULL DEFAULT 'event';
+
+SELECT id, kind, note FROM agent_memory_real
+WHERE kind = 'policy' ORDER BY VEC_DISTANCE(embedding, @q) LIMIT 1;
++----+--------+---------------------------------------+--------+
+| id | kind   | note                                  | dist   |
++----+--------+---------------------------------------+--------+
+|  1 | policy | Refunds over 50 dollars need approval | 0.3621 |
++----+--------+---------------------------------------+--------+
+
+SELECT id, kind, note FROM agent_memory_real
+WHERE kind = 'event' ORDER BY VEC_DISTANCE(embedding, @q) LIMIT 1;
++----+-------+--------------------------------------------------+--------+
+| id | kind  | note                                             | dist   |
++----+-------+--------------------------------------------------+--------+
+|  2 | event | Customer asked for a refund to the original card | 0.3264 |
++----+-------+--------------------------------------------------+--------+
+
+<span class="c">-- EXPLAIN: type index, key </span><span class="ok">embedding</span><span class="c">, Using where</span></pre>
+    </div>
+    <p>Both lookups still go through the vector index. With the rule and the request labeled, the LLM said NO in all 10 runs. That's the case for keeping memory in a relational database. The embedding finds what's similar, and a plain column guarantees that the rule always reaches the agent.</p>
+    <p class="small">Run details: the embeddings and SQL are in <code>04-embedding-demo/embed-demo.sql</code> and <code>step2-proof.sql</code>, and the LLM runs in <code>ask_llm.py</code>. The LLM got the instruction "Answer using only the notes from your memory below", followed by the notes and the question. It had to end with <code>DECISION: YES</code> or <code>DECISION: NO</code>. Run 1 used temperature 0, and runs 2 to 10 used temperature 0.7, with seeds 42 to 51. The SQL output above is trimmed for width (the policy and event queries also selected the rounded distance). The full answers are in the evidence files.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Step 3</div>
+    <h2>Add 100,000 rows to see the index do the work</h2>
+    <p>Three rows can't show that an index matters, because scanning three rows is fast anyway. So the table grows to 100,000 rows of 384-dimension vectors, generated in SQL as 100 clusters with noise. Then the same query runs two ways, through the vector index and with <code>IGNORE INDEX</code> to force a full scan.</p>
+<div class="term">
+      <div class="term-head"><span>MariaDB 12.3.3 &middot; one query, two paths</span></div>
+<pre><span class="c">-- through the vector index</span>
+| table | type  | key       | rows   | Extra          |
+| mem   | index | <span class="ok">embedding</span> | 10     |                |
+Handler_read_rnd_next   <span class="ok">11</span>        InnoDB pages accessed   <span class="ok">31</span>
+
+<span class="c">-- IGNORE INDEX (embedding): full scan</span>
+| table | type  | key       | rows   | Extra          |
+| mem   | ALL   | NULL      | 100000 | Using filesort |
+Handler_read_rnd_next   <span class="bad">100012</span>    InnoDB pages accessed   <span class="bad">11145</span></pre>
+    </div>
+    <p>The index reads 11 rows and touches 31 storage pages. The scan has to read all 100,012 rows across 11,145 pages, on every version tested.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>version</th><th class="n">recall@10</th><th class="n">index p50</th><th class="n">index p95</th><th class="n">scan p50</th><th class="n">index build</th></tr></thead>
+        <tbody>
+          <tr><td>11.8.9 LTS</td><td class="n good">1.000</td><td class="n">1.36 ms</td><td class="n">2.00 ms</td><td class="n">192.7 ms</td><td class="n">315 s*</td></tr>
+          <tr><td>12.3.3 LTS</td><td class="n good">1.000</td><td class="n">1.12 ms</td><td class="n">1.34 ms</td><td class="n">190.8 ms</td><td class="n">335 s*</td></tr>
+          <tr><td>13.1.1</td><td class="n good">0.998</td><td class="n">0.97 ms</td><td class="n">1.13 ms</td><td class="n">193.3 ms</td><td class="n">218 s</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">50 queries per version, top 10 neighbors, warm cache, <code>mhnsw_ef_search</code> = 20 (the default), <code>M</code> = 16, <code>mhnsw_max_cache_size</code> = 1 GB. Recall compares the index's top 10 with the exact top 10 from the full scan. Apple M4 Pro, 14 cores, 24 GB RAM. *The 11.8.9 and 12.3.3 builds ran at the same time, so their build times aren't comparable with 13.1.1. These scans ran on the default 128 MB InnoDB buffer pool, which slows them down. Synthetic clusters are also easier than real text, so treat this step as proof of index use, not as a benchmark.</p>
+  </section>
+
+  <section id="data">
+    <div class="eyebrow">Step 4</div>
+    <h2>Replace the synthetic data with 200,000 real embeddings</h2>
+    <p>Synthetic clusters flatter an index, so the next run uses two public datasets that developers can download and check. Both come from Hugging Face. One holds Wikipedia paragraphs, the kind of text chunks an agent keeps as knowledge. The other holds DBpedia entities embedded with OpenAI's model, the kind of reference data an agent looks things up in.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>dataset</th><th>source</th><th class="n">rows used</th><th class="n">dims</th><th>model</th><th>used in</th></tr></thead>
+        <tbody>
+          <tr><td>Snippet notes</td><td>hand-written</td><td class="n">3</td><td class="n">3</td><td>none</td><td>the example</td></tr>
+          <tr><td>Synthetic clusters</td><td>generated in SQL</td><td class="n">100,000</td><td class="n">384</td><td>none</td><td>proof at scale</td></tr>
+          <tr><td>Wikipedia paragraphs</td><td>Hugging Face</td><td class="n">100,000 + 220,250</td><td class="n">384</td><td>all-MiniLM-L6-v2</td><td>real embeddings, time travel</td></tr>
+          <tr><td>DBpedia entities</td><td>Hugging Face</td><td class="n">115,386</td><td class="n">1,536</td><td>OpenAI text-embedding-ada-002</td><td>real embeddings, mixed load</td></tr>
+          <tr><td>Agent notes</td><td>hand-written</td><td class="n">3 + 5</td><td class="n">1,024 / 256</td><td>qwen3-embedding 0.6B</td><td>embedding step, agent memory</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Wikipedia paragraphs, 384 dimensions</h3>
+    <ul class="facts">
+      <li><strong>Source:</strong> the <code>maloyan/wikipedia-22-12-en-embeddings-all-MiniLM-L6-v2</code> dataset holds 35,167,920 English Wikipedia paragraphs from the December 2022 dump, in 145 Parquet files. Its columns are <code>id</code>, <code>title</code>, <code>text</code>, <code>url</code>, <code>wiki_id</code>, <code>views</code>, <code>paragraph_id</code>, <code>langs</code>, and <code>emb</code>. The dataset declares no license, and the text is Wikipedia's, under CC BY-SA.</li>
+      <li><strong>The slice used here:</strong> the first Parquet file (613 MB) holds 242,538 paragraphs from 3,681 articles. The file is sorted by page views, so these are the most-read articles, such as "Deaths in 2022", YouTube, Elon Musk, the United States, and Elizabeth II. Paragraphs run 209 to 1,042 characters (10th to 90th percentile), with a median of 528, which is close to the chunk size a retrieval system stores.</li>
+      <li><strong>Vectors:</strong> each paragraph has 384 32-bit floats from the sentence-transformers model all-MiniLM-L6-v2. Every vector has length 1.0000, so cosine distance is the right metric.</li>
+      <li><strong>What it stands in for:</strong> an agent's knowledge memory, with many short passages about the same topics. At about 66 paragraphs per article, each query has close neighbors from its own article. That's realistic for chunked documents, and kinder to an index than unrelated text.</li>
+    </ul>
+    <h3>DBpedia entities, 1,536 dimensions</h3>
+    <ul class="facts">
+      <li><strong>Source:</strong> the <code>KShivendu/dbpedia-entities-openai-1M</code> dataset (MIT license) holds 1,000,000 DBpedia entities in 26 Parquet files. Each row has an <code>_id</code>, a <code>title</code>, a short abstract in <code>text</code>, and the embedding in <code>openai</code>.</li>
+      <li><strong>The slice used here:</strong> the first three files (1.1 GB) hold 115,386 entities.</li>
+      <li><strong>Vectors:</strong> each entity has 1,536 floats from OpenAI text-embedding-ada-002, loaded as 32-bit floats, the format a <code>VECTOR</code> column stores. Every vector has length 1.0000. Public vector benchmarks commonly use this set.</li>
+      <li><strong>What it stands in for:</strong> an agent's reference memory, a knowledge base embedded with a hosted model, at the vector size of OpenAI's widely used embeddings.</li>
+    </ul>
+    <h3>How the test uses the data</h3>
+    <ul class="facts">
+      <li><strong>Rows and queries:</strong> each dataset is shuffled with a fixed seed (42). The first 100,000 rows go into the table, and the next 250 become queries. No query is in the table, so every query is a new passage looking for its nearest neighbors.</li>
+      <li><strong>Queries are passages, not questions:</strong> a held-out paragraph searches for similar paragraphs, while a real agent searches with a question. Step 2 and the last step cover the question-to-note case on a small scale.</li>
+      <li><strong>The <code>agent_id</code> label:</strong> row number modulo 10, so each agent owns exactly 10% of the rows, unrelated to content. Real agents usually remember different topics, so their rows would cluster in vector space. That case isn't tested here.</li>
+      <li><strong>Loading:</strong> the vectors travel as hex-encoded 32-bit floats in TSV files and load with <code>LOAD DATA LOCAL INFILE ... SET embedding = UNHEX(@h)</code>. Loading takes 3 seconds for 100,000 rows at 384 dimensions and 9 seconds at 1,536.</li>
+    </ul>
+    <p>With real data, the index still finds about 98 of every 100 true nearest neighbors at the default setting, and answers in under 2 milliseconds at p99. The exact scan takes 45 to 138 milliseconds at p50.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>MariaDB 12.3.3</th><th class="n">ef_search</th><th class="n">recall@10</th><th class="n">p50</th><th class="n">p95</th><th class="n">p99</th></tr></thead>
+        <tbody>
+          <tr><td>384 dims, index</td><td class="n">20</td><td class="n good">0.988</td><td class="n">0.30 ms</td><td class="n">0.70 ms</td><td class="n">0.89 ms</td></tr>
+          <tr><td>384 dims, index</td><td class="n">100</td><td class="n good">0.997</td><td class="n">0.81 ms</td><td class="n">1.39 ms</td><td class="n">1.68 ms</td></tr>
+          <tr><td>384 dims, full scan</td><td class="n">n/a</td><td class="n">1.000</td><td class="n">44.95 ms</td><td class="n">46.89 ms</td><td class="n">51.08 ms</td></tr>
+          <tr><td>1,536 dims, index</td><td class="n">20</td><td class="n good">0.979</td><td class="n">0.58 ms</td><td class="n">1.15 ms</td><td class="n">1.65 ms</td></tr>
+          <tr><td>1,536 dims, index</td><td class="n">100</td><td class="n good">0.995</td><td class="n">2.37 ms</td><td class="n">6.75 ms</td><td class="n">8.77 ms</td></tr>
+          <tr><td>1,536 dims, full scan</td><td class="n">n/a</td><td class="n">1.000</td><td class="n">138.32 ms</td><td class="n">142.03 ms</td><td class="n">147.92 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Raising <code>mhnsw_ef_search</code>, the number of candidates the index examines, buys back the rest of the recall for a few milliseconds. On 11.8.9, recall at the default is lower (0.968 at 384 dimensions and 0.949 at 1,536) and reaches 0.994 and 0.988 at 200. Each version had one index build, so part of that gap may be build-to-build variation.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Step 5</div>
+    <h2>Give each agent its own memory in the same table</h2>
+    <p>An enterprise runs more than one agent. Each agent works like an actor in the actor model. It keeps its own state and talks to the other agents only through messages. In the table, an agent's state is the set of rows with its <code>agent_id</code>, and it reads them with a filtered vector query.</p>
+<figure class="fig">
+      <div class="figscroll">
+        <svg class="diag" viewBox="0 0 760 330" role="img" aria-label="Actor model: three agents exchange messages with each other and never read each other's memory. Each agent reads and writes only its own rows in one shared agent_memory table, selected by WHERE agent_id. One vector index covers all agents' rows, so every filtered query walks the shared graph.">
+          <defs>
+            <marker id="act-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="act-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="box" x="20" y="40" width="170" height="60" rx="6"/>
+          <text class="t" x="105" y="66" text-anchor="middle">billing-agent</text>
+          <text class="sm mut" x="105" y="84" text-anchor="middle">actor · own state</text>
+          <rect class="box" x="20" y="140" width="170" height="60" rx="6"/>
+          <text class="t" x="105" y="166" text-anchor="middle">support-agent</text>
+          <text class="sm mut" x="105" y="184" text-anchor="middle">actor · own state</text>
+          <rect class="box" x="20" y="240" width="170" height="60" rx="6"/>
+          <text class="t" x="105" y="266" text-anchor="middle">claude-code</text>
+          <text class="sm mut" x="105" y="284" text-anchor="middle">actor · own state</text>
+          <line class="ln ret" x1="60" y1="100" x2="60" y2="138" marker-start="url(#act-a)" marker-end="url(#act-a)"/>
+          <text class="sm halo" x="68" y="124">message</text>
+          <line class="ln ret" x1="60" y1="200" x2="60" y2="238" marker-start="url(#act-a)" marker-end="url(#act-a)"/>
+          <text class="sm halo" x="68" y="224">message</text>
+
+          <rect class="frame" x="400" y="20" width="340" height="294" rx="8"/>
+          <text class="t" x="570" y="42" text-anchor="middle">MariaDB · one agent_memory table</text>
+          <rect class="plain" x="420" y="58" width="300" height="56" rx="4"/>
+          <text class="mono" x="432" y="82">agent_id = 'billing-agent'</text>
+          <text class="sm mut" x="432" y="100">its notes and vectors</text>
+          <rect class="plain" x="420" y="126" width="300" height="56" rx="4"/>
+          <text class="mono" x="432" y="150">agent_id = 'support-agent'</text>
+          <text class="sm mut" x="432" y="168">its notes and vectors</text>
+          <rect class="plain" x="420" y="194" width="300" height="56" rx="4"/>
+          <text class="mono" x="432" y="218">agent_id = 'claude-code'</text>
+          <text class="sm mut" x="432" y="236">its notes and vectors</text>
+          <rect class="accbox" x="420" y="266" width="300" height="34" rx="4"/>
+          <text class="sm acct t" x="570" y="288" text-anchor="middle">one VECTOR INDEX over every agent's rows</text>
+
+          <line class="ln" x1="190" y1="70" x2="418" y2="86" marker-end="url(#act-a)"/>
+          <text class="sm mono halo" x="300" y="68" text-anchor="middle">WHERE agent_id = ?</text>
+          <line class="ln" x1="190" y1="170" x2="418" y2="154" marker-end="url(#act-a)"/>
+          <line class="ln" x1="190" y1="270" x2="418" y2="222" marker-end="url(#act-a)"/>
+          <text class="sm halo" x="300" y="268" text-anchor="middle">recall and remember</text>
+        </svg>
+      </div>
+      <figcaption>Agents as actors. They exchange messages and never read each other's memory. In the database, each agent's memory is its rows, selected with <code>WHERE agent_id = ?</code>, and one vector index covers every agent. Each filtered query walks the shared graph and skips other agents' rows, so the cost is the latency in the table below. Per-agent database users and grants would make this isolation enforced, not only filtered. That part is not tested here.</figcaption>
+    </figure>
+    <p>Every filtered query returns the full 10 rows, and recall stays high, from 0.959 to 0.998 depending on <code>mhnsw_ef_search</code>. The cost is latency, because the index walks past other agents' rows to collect 10 of the right ones.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>MariaDB 12.3.3</th><th class="n">ef_search</th><th class="n">recall@10</th><th class="n">p50</th><th class="n">p95</th><th class="n">p99</th></tr></thead>
+        <tbody>
+          <tr><td>384 dims, index + WHERE</td><td class="n">20</td><td class="n">0.959</td><td class="n">2.59 ms</td><td class="n">5.50 ms</td><td class="n">9.11 ms</td></tr>
+          <tr><td>384 dims, index + WHERE</td><td class="n">400</td><td class="n good">0.996</td><td class="n">11.15 ms</td><td class="n">19.85 ms</td><td class="n">23.57 ms</td></tr>
+          <tr><td>384 dims, scan + WHERE</td><td class="n">n/a</td><td class="n">1.000</td><td class="n">22.49 ms</td><td class="n">23.24 ms</td><td class="n">23.62 ms</td></tr>
+          <tr><td>1,536 dims, index + WHERE</td><td class="n">20</td><td class="n good">0.990</td><td class="n">12.56 ms</td><td class="n">49.94 ms</td><td class="n">66.32 ms</td></tr>
+          <tr><td>1,536 dims, index + WHERE</td><td class="n">400</td><td class="n good">0.998</td><td class="n">83.57 ms</td><td class="n">218.03 ms</td><td class="n">308.70 ms</td></tr>
+          <tr><td>1,536 dims, scan + WHERE</td><td class="n">n/a</td><td class="n">1.000</td><td class="n">51.59 ms</td><td class="n">52.84 ms</td><td class="n">54.81 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>At 1,536 dimensions with a filter that keeps 10% of the rows, the index's p95 (50 ms) already matches an exact filtered scan (52 ms). For a filter that selective at this size, the exact scan is the better plan, and it's still one SQL query on the same table.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Step 6</div>
+    <h2>Keep reading while the agent writes</h2>
+    <p>Agents learn while they work, so their memory changes under load. This run keeps four readers searching the 1,536-dimension table for 60 seconds while a writer adds about 18 new rows per second. A fifth session searches for each new row with that row's own vector, to see how soon it shows up.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>1,536 dims, 60 s</th><th class="n">reads/s</th><th class="n">read p50</th><th class="n">read p95</th><th class="n">read p99</th><th class="n">insert p50</th><th class="n">insert p99</th></tr></thead>
+        <tbody>
+          <tr><td>12.3.3, 4 readers, no writes</td><td class="n">2,837</td><td class="n">1.19 ms</td><td class="n">3.26 ms</td><td class="n">4.51 ms</td><td class="n">n/a</td><td class="n">n/a</td></tr>
+          <tr><td>12.3.3, 4 readers + 18.5 inserts/s</td><td class="n">524</td><td class="n">5.67 ms</td><td class="n">20.04 ms</td><td class="n">33.12 ms</td><td class="n">15.57 ms</td><td class="n">41.85 ms</td></tr>
+          <tr><td>11.8.9, 4 readers, no writes</td><td class="n">3,049</td><td class="n">1.09 ms</td><td class="n">3.03 ms</td><td class="n">4.24 ms</td><td class="n">n/a</td><td class="n">n/a</td></tr>
+          <tr><td>11.8.9, 4 readers + 18.5 inserts/s</td><td class="n">708</td><td class="n">3.89 ms</td><td class="n">15.83 ms</td><td class="n">28.55 ms</td><td class="n">13.28 ms</td><td class="n">35.24 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="facts">
+      <li><strong>New rows are searchable right away:</strong> the prober finds 1,107 of 1,109 new rows on 12.3.3 (1,106 on 11.8.9) as the top result, on average 30 to 33 ms after commit, including its own polling time. The few misses are search misses, not visibility gaps, because an exact search returns each missed row as its own top match.</li>
+      <li><strong>Writes cost reads:</strong> 18 inserts per second cut read throughput by 4 to 5 times and raise the read p99 from about 4.5 ms to 29 to 33 ms. Each insert, including its vector index update, takes 13 to 16 ms at p50.</li>
+      <li><strong>Transactions hold:</strong> in a separate test, a row written inside an open transaction is invisible to other sessions' searches, and it leaves search after <code>ROLLBACK</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="eyebrow">Step 7</div>
+    <h2>Ask what the agent knew before the policy changed</h2>
+    <p>Back to the billing agent. If the refund limit moves from 50 to 100 dollars, an auditor will ask what the agent knew when it approved last week's refunds. A system-versioned table keeps every past version of a row, and the server maintains that history on its own. With a vector index on the same table, one query searches the agent's memory as it was at any past moment.</p>
+<div class="term">
+      <div class="term-head"><span>MariaDB 12.3.3</span></div>
+<pre>CREATE TABLE mem_v ( ... embedding VECTOR(384) NOT NULL,
+  VECTOR INDEX (embedding) DISTANCE=cosine ) WITH SYSTEM VERSIONING;
+
+SELECT id FROM mem_v FOR SYSTEM_TIME AS OF @before_policy_change
+ORDER BY VEC_DISTANCE(embedding, @question) LIMIT 10;
+<span class="c">-- plan: type index, key </span><span class="ok">embedding</span><span class="c">, Using where</span></pre>
+    </div>
+<figure class="fig">
+      <div class="figscroll">
+        <svg class="diag" viewBox="0 0 760 330" role="img" aria-label="Schema: the agent_memory table has id, agent_id, note, and a VECTOR embedding column, plus two invisible timestamp columns added by system versioning. The primary key indexes id. One vector index covers the embedding of both current rows and history rows; queries filter by row_end or AS OF time while they walk that index.">
+          <defs>
+            <marker id="sch-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="sch-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="box" x="20" y="20" width="320" height="214" rx="6"/>
+          <text class="mono t" x="32" y="42">agent_memory</text>
+          <text class="sm mono mut" x="328" y="42" text-anchor="end">WITH SYSTEM VERSIONING</text>
+          <rect class="accbox" x="21" y="144" width="318" height="30"/>
+          <line class="ln" x1="20" y1="54" x2="340" y2="54" style="stroke: var(--panel-line)"/>
+          <line class="ln" x1="20" y1="84" x2="340" y2="84" style="stroke: var(--panel-line)"/>
+          <line class="ln" x1="20" y1="114" x2="340" y2="114" style="stroke: var(--panel-line)"/>
+          <line class="ln" x1="20" y1="144" x2="340" y2="144" style="stroke: var(--panel-line)"/>
+          <line class="ln" x1="20" y1="174" x2="340" y2="174" style="stroke: var(--panel-line)"/>
+          <line class="ln" x1="20" y1="204" x2="340" y2="204" style="stroke: var(--panel-line)"/>
+          <text class="mono" x="32" y="74">id</text><text class="mono mut" x="150" y="74">BIGINT UNSIGNED</text><text class="sm mono" x="328" y="74" text-anchor="end">PK</text>
+          <text class="mono" x="32" y="104">agent_id</text><text class="mono mut" x="150" y="104">VARCHAR(64)</text>
+          <text class="mono" x="32" y="134">note</text><text class="mono mut" x="150" y="134">TEXT</text>
+          <text class="mono acct" x="32" y="164">embedding</text><text class="mono acct" x="150" y="164">VECTOR(n)</text>
+          <text class="mono mut" x="32" y="194">row_start</text><text class="mono mut" x="150" y="194">TIMESTAMP(6)</text><text class="sm mut" x="328" y="194" text-anchor="end">invisible</text>
+          <text class="mono mut" x="32" y="224">row_end</text><text class="mono mut" x="150" y="224">TIMESTAMP(6)</text><text class="sm mut" x="328" y="224" text-anchor="end">invisible</text>
+
+          <rect class="plain" x="440" y="50" width="300" height="40" rx="4"/>
+          <text class="mono" x="590" y="67" text-anchor="middle">PRIMARY KEY (id)</text>
+          <text class="sm mut" x="590" y="82" text-anchor="middle">B-tree</text>
+          <line class="ln" x1="340" y1="69" x2="438" y2="69" marker-end="url(#sch-a)"/>
+
+          <rect class="accbox" x="440" y="130" width="300" height="50" rx="4"/>
+          <text class="mono t acct" x="590" y="150" text-anchor="middle">VECTOR INDEX (embedding)</text>
+          <text class="sm" x="590" y="168" text-anchor="middle">MHNSW graph · DISTANCE=cosine · M=16</text>
+          <line class="ln acc" x1="340" y1="159" x2="438" y2="159" marker-end="url(#sch-acc)"/>
+
+          <rect class="box" x="440" y="230" width="140" height="44" rx="4"/>
+          <text class="sm" x="510" y="248" text-anchor="middle">current rows</text>
+          <text class="sm mono mut" x="510" y="264" text-anchor="middle">row_end = max</text>
+          <rect class="frame" x="600" y="230" width="140" height="44" rx="4"/>
+          <text class="sm" x="670" y="248" text-anchor="middle">history rows</text>
+          <text class="sm mono mut" x="670" y="264" text-anchor="middle">row_end = replaced</text>
+          <line class="ln acc" x1="510" y1="230" x2="510" y2="182" marker-end="url(#sch-acc)"/>
+          <line class="ln acc" x1="670" y1="230" x2="670" y2="182" marker-end="url(#sch-acc)"/>
+          <text class="sm acct halo" x="590" y="210" text-anchor="middle">one graph</text>
+
+          <text class="sm" x="510" y="298" text-anchor="middle">current query</text>
+          <text class="sm mono mut" x="510" y="314" text-anchor="middle">keeps row_end = max</text>
+          <text class="sm" x="670" y="298" text-anchor="middle">AS OF T</text>
+          <text class="sm mono mut" x="670" y="314" text-anchor="middle">row_start ≤ T &lt; row_end</text>
+        </svg>
+      </div>
+      <figcaption>One row holds the relational columns and the embedding. System versioning adds two invisible timestamp columns and keeps old versions in the same table, so current and history rows sit in one vector index graph. Each query applies its time filter while it walks that graph. That is why current-state recall fell as history grew. A vector index can't be split by history partitions (error 1506).</figcaption>
+    </figure>
+    <p>To see how this holds up as history grows, the table starts with 20,000 real MiniLM vectors. Ten revision rounds give every memory a new real embedding, and each round moves the old versions to history. Each measurement uses 250 held-out queries against an exact <code>IGNORE INDEX</code> baseline.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>query</th><th class="n">history rows</th><th class="n">recall@10</th><th class="n">p50</th><th class="n">p99</th><th class="n">exact p50</th></tr></thead>
+        <tbody>
+          <tr><td>current state</td><td class="n">0</td><td class="n good">0.986</td><td class="n">0.36 ms</td><td class="n">2.58 ms</td><td class="n">9.69 ms</td></tr>
+          <tr><td>current state</td><td class="n">20,000</td><td class="n good">0.980</td><td class="n">1.18 ms</td><td class="n">10.75 ms</td><td class="n">17.49 ms</td></tr>
+          <tr><td>current state</td><td class="n">100,000</td><td class="n">0.955</td><td class="n">5.09 ms</td><td class="n">37.56 ms</td><td class="n">43.58 ms</td></tr>
+          <tr><td>current state</td><td class="n">200,000</td><td class="n">0.922</td><td class="n">11.93 ms</td><td class="n">68.87 ms</td><td class="n">74.71 ms</td></tr>
+          <tr><td>AS OF original</td><td class="n">20,000</td><td class="n good">0.996</td><td class="n">0.75 ms</td><td class="n">2.02 ms</td><td class="n">15.63 ms</td></tr>
+          <tr><td>AS OF original</td><td class="n">100,000</td><td class="n good">0.983</td><td class="n">2.60 ms</td><td class="n">8.15 ms</td><td class="n">37.48 ms</td></tr>
+          <tr><td>AS OF original</td><td class="n">200,000</td><td class="n">0.974</td><td class="n">5.41 ms</td><td class="n">17.62 ms</td><td class="n">63.69 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="facts">
+      <li><strong>The past is searchable:</strong> every query returns the full 10 rows and uses the vector index. The query for the original memories keeps recall at 0.974 or higher, with p99 under 18 ms, even with 200,000 history rows.</li>
+      <li><strong>History has a cost:</strong> history rows share the vector index with current rows. At 10 versions per memory, current-state recall falls to 0.922, and its p99 (69 ms) nears the exact scan's p50 (75 ms). Each round of 20,000 updates takes 78 to 100 seconds, and the rounds slow as history grows.</li>
+      <li><strong>Partitions don't help:</strong> the usual fix, <code>PARTITION BY SYSTEM_TIME</code>, is refused with <code>ERROR 1506: Partitioned tables do not support VECTOR</code>. Pruning history with <code>DELETE HISTORY BEFORE</code> is the lever that's left.</li>
+      <li><strong>PostgreSQL has no equivalent:</strong> the PostgreSQL 18.6 documentation lists SQL feature T180, "System-versioned tables", as unsupported, and so does the development documentation (20devel, which includes PostgreSQL 19). A pgvector stack needs triggers and a separate history table with its own vector index, or an extension.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="eyebrow">Step 8</div>
+    <h2>Let an agent run the tests, and remember what it learned</h2>
+    <p>Nobody installed a database by hand for any of this. A coding agent, Claude Code, ran every step through the MariaDB AI Plugins. The plugin's tools run on <code>mariadb-shell</code>, the MariaDB command-line shell, which the plugin starts as a local MCP server. MCP (Model Context Protocol) is the standard way an agent calls external tools.</p>
+<figure class="fig">
+      <div class="figscroll">
+        <svg class="diag" viewBox="0 0 760 370" role="img" aria-label="Architecture: Claude Code calls the mariadb-shell MCP server from the MariaDB AI Plugins. Its sandbox tools start and stop local MariaDB server processes, and its db tools send SQL to them. Ollama turns text into vectors for the agent. Inside MariaDB, one agent_memory table holds notes, vectors, and history rows, all covered by one vector index.">
+          <defs>
+            <marker id="arch-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="arch-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="box" x="20" y="150" width="160" height="70" rx="6"/>
+          <text class="t" x="100" y="180" text-anchor="middle">Claude Code</text>
+          <text class="sm mut" x="100" y="198" text-anchor="middle">the agent</text>
+          <rect class="plain" x="20" y="290" width="160" height="60" rx="6"/>
+          <text class="t" x="100" y="316" text-anchor="middle">Ollama</text>
+          <text class="sm mono mut" x="100" y="334" text-anchor="middle">qwen3-embedding 0.6B</text>
+          <line class="ln" x1="60" y1="220" x2="60" y2="288" marker-end="url(#arch-a)"/>
+          <text class="sm" x="66" y="258">text</text>
+          <line class="ln ret" x1="140" y1="290" x2="140" y2="222" marker-end="url(#arch-a)"/>
+          <text class="sm" x="134" y="258" text-anchor="end">vector</text>
+
+          <rect class="frame" x="250" y="20" width="230" height="330" rx="8"/>
+          <text class="t" x="365" y="42" text-anchor="middle">MariaDB AI Plugins</text>
+          <text class="sm mono mut" x="365" y="58" text-anchor="middle">dev@mariadb</text>
+          <rect class="plain" x="265" y="72" width="200" height="36" rx="4"/>
+          <text class="sm" x="365" y="94" text-anchor="middle">SQL skills, from the docs</text>
+          <rect class="box" x="265" y="122" width="200" height="214" rx="6"/>
+          <text class="t" x="365" y="144" text-anchor="middle">mariadb-shell</text>
+          <text class="sm mono mut" x="365" y="160" text-anchor="middle">MCP server · stdio</text>
+          <rect class="plain" x="280" y="172" width="170" height="44" rx="4"/>
+          <text class="mono" x="365" y="190" text-anchor="middle">db.*</text>
+          <text class="sm mut" x="365" y="206" text-anchor="middle">connect · execute_sql · close</text>
+          <rect class="plain" x="280" y="226" width="170" height="44" rx="4"/>
+          <text class="mono" x="365" y="244" text-anchor="middle">sandbox.*</text>
+          <text class="sm mut" x="365" y="260" text-anchor="middle">deploy · stop · delete</text>
+          <rect class="plain" x="280" y="280" width="170" height="44" rx="4"/>
+          <text class="mono" x="365" y="298" text-anchor="middle">mcp.setup</text>
+          <text class="sm mut" x="365" y="314" text-anchor="middle">allowed connections, paths</text>
+
+          <path class="ln" d="M265,90 H100 V148" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="182" y="84" text-anchor="middle">loaded as skills</text>
+          <line class="ln" x1="180" y1="178" x2="263" y2="178" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="222" y="171" text-anchor="middle">tool call</text>
+          <line class="ln ret" x1="265" y1="194" x2="182" y2="194" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="222" y="210" text-anchor="middle">result</text>
+
+          <rect class="frame" x="540" y="20" width="200" height="330" rx="8"/>
+          <text class="t" x="640" y="42" text-anchor="middle">MariaDB server</text>
+          <text class="sm mono mut" x="640" y="58" text-anchor="middle">mariadbd · 11.8 / 12.3 / 13.1</text>
+          <rect class="box" x="555" y="72" width="170" height="128" rx="4"/>
+          <text class="mono t" x="640" y="92" text-anchor="middle">agent_memory</text>
+          <line class="ln" x1="555" y1="100" x2="725" y2="100" style="stroke: var(--panel-line)"/>
+          <text class="mono" x="568" y="120">id, agent_id, note</text>
+          <text class="mono acct" x="568" y="142">embedding VECTOR(n)</text>
+          <text class="mono mut" x="568" y="164">row_start, row_end</text>
+          <text class="sm mut" x="568" y="184">system versioning</text>
+          <rect class="accbox" x="555" y="226" width="170" height="44" rx="4"/>
+          <text class="mono t acct" x="640" y="244" text-anchor="middle">VECTOR INDEX</text>
+          <text class="sm" x="640" y="260" text-anchor="middle">MHNSW graph · cosine</text>
+          <rect class="frame" x="555" y="296" width="170" height="40" rx="4"/>
+          <text class="sm" x="640" y="313" text-anchor="middle">history rows</text>
+          <text class="sm mut" x="640" y="328" text-anchor="middle">same table, same index</text>
+          <line class="ln" x1="620" y1="200" x2="620" y2="224" marker-end="url(#arch-a)"/>
+          <text class="sm mut" x="628" y="216">updated on write</text>
+          <line class="ln acc" x1="700" y1="296" x2="700" y2="272" marker-end="url(#arch-acc)"/>
+
+          <line class="ln" x1="450" y1="194" x2="553" y2="194" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="502" y="186" text-anchor="middle">SQL over TCP</text>
+          <line class="ln" x1="450" y1="248" x2="538" y2="248" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="494" y="240" text-anchor="middle">start · stop</text>
+        </svg>
+      </div>
+      <figcaption>The agent talks to one MCP server. Through the <code>sandbox.*</code> tools it starts and stops local MariaDB processes, then sends SQL to them with <code>db.*</code>. Embeddings come from Ollama, outside the plugin. Inside the server, notes, vectors, and history rows share one table and one vector index. Without an agent, <code>sandbox.sh</code> drives the same <code>mariadb-shell</code> sandbox commands, and the <code>mariadb</code> client sends the same SQL.</figcaption>
+    </figure>
+    <p>Installing the plugin takes two commands in Claude Code. On first use, the plugin installs <code>mariadb-shell</code> if it's missing. Before the MCP server can reach a database, run <code>mariadb-shell -- mcp setup</code> once per machine.</p>
+<div class="term">
+      <div class="term-head"><span>install the plugin in Claude Code</span><button class="copy" id="copy-install" data-target="install">Copy</button></div>
+<pre id="install">/plugin marketplace add mariadb/ai-plugins
+/plugin install dev@mariadb</pre>
+    </div>
+    <p>The agent deployed a local sandbox for each version, ran every script, and deleted the sandboxes afterward. There was no Docker, no cloud account, and no setup script.</p>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>step</th><th>tool</th><th>what it did</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>sandbox.list_available_versions</td><td>Listed 11.8.9, 12.3.3, 13.1.1</td></tr>
+          <tr><td>2</td><td>sandbox.deploy</td><td>Started one local server per version on ports 3411, 3412, 3410</td></tr>
+          <tr><td>3</td><td>mariadb-shell --sql -f</td><td>Ran the exact script on each version and saved the raw output</td></tr>
+          <tr><td>4</td><td>mariadb client</td><td>Bulk-loaded 100,000 rows and ran the scale, filter, and transaction tests</td></tr>
+          <tr><td>5</td><td>sandbox.stop, sandbox.delete</td><td>Shut down and removed all three sandboxes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Then the test turned around. The agent used MariaDB as its own memory, through the same MCP server. It embedded five things it had learned during these runs, stored them, and closed the connection. On a new connection, it embedded three questions and recalled the top 2 memories for each.</p>
+<figure class="fig">
+      <div class="figscroll">
+        <svg class="diag" viewBox="0 0 760 716" role="img" aria-label="Call flow ladder across five participants: developer, Claude Code, Ollama, the mariadb-shell MCP server, and the MariaDB sandbox. Setup deploys the sandbox. Turn 1 connects, embeds five notes, and inserts them. Turn 2 opens a new connection, embeds a question, and runs a vector query that walks the index and returns the top 2 notes. Cleanup stops and deletes the sandbox.">
+          <defs>
+            <marker id="lad-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="lad-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="band" x="0" y="64" width="760" height="114"/>
+          <rect class="band" x="0" y="406" width="760" height="234"/>
+          <text class="sm mut t" x="8" y="78">SETUP</text>
+          <text class="sm mut t" x="8" y="198">TURN 1 · STORE</text>
+          <text class="sm mut t" x="8" y="420">TURN 2 · RECALL ON A NEW CONNECTION</text>
+          <text class="sm mut t" x="8" y="660">CLEANUP</text>
+
+          <line class="life" x1="70" y1="56" x2="70" y2="710"/>
+          <line class="life" x1="225" y1="56" x2="225" y2="710"/>
+          <line class="life" x1="375" y1="56" x2="375" y2="710"/>
+          <line class="life" x1="530" y1="56" x2="530" y2="710"/>
+          <line class="life" x1="685" y1="56" x2="685" y2="710"/>
+          <rect class="box" x="10" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="70" y="32" text-anchor="middle">Developer</text>
+          <text class="sm mut" x="70" y="48" text-anchor="middle">you</text>
+          <rect class="box" x="165" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="225" y="32" text-anchor="middle">Claude Code</text>
+          <text class="sm mut" x="225" y="48" text-anchor="middle">the agent</text>
+          <rect class="plain" x="315" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="375" y="32" text-anchor="middle">Ollama</text>
+          <text class="sm mut" x="375" y="48" text-anchor="middle">embeddings</text>
+          <rect class="box" x="470" y="14" width="120" height="42" rx="6"/>
+          <text class="t" x="530" y="32" text-anchor="middle">mariadb-shell</text>
+          <text class="sm mut" x="530" y="48" text-anchor="middle">MCP server</text>
+          <rect class="accbox" x="625" y="14" width="120" height="42" rx="6"/>
+          <text class="t acct" x="685" y="32" text-anchor="middle">MariaDB</text>
+          <text class="sm mut" x="685" y="48" text-anchor="middle">12.3.3 sandbox</text>
+
+          <line class="ln" x1="70" y1="96" x2="223" y2="96" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="147" y="90" text-anchor="middle">run the test</text>
+          <line class="ln" x1="225" y1="120" x2="528" y2="120" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="114" text-anchor="middle">sandbox.deploy(3412, '12.3')</text>
+          <line class="ln" x1="530" y1="144" x2="683" y2="144" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="138" text-anchor="middle">start mariadbd</text>
+          <line class="ln ret" x1="530" y1="168" x2="227" y2="168" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="162" text-anchor="middle">deployed: 12.3.3</text>
+
+          <line class="ln" x1="225" y1="216" x2="528" y2="216" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="210" text-anchor="middle">db.connect(uri)</text>
+          <line class="ln ret" x1="530" y1="240" x2="227" y2="240" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="234" text-anchor="middle">connection id</text>
+          <line class="ln" x1="225" y1="264" x2="373" y2="264" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="258" text-anchor="middle">embed 5 notes</text>
+          <line class="ln ret" x1="375" y1="288" x2="227" y2="288" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="282" text-anchor="middle">5 vectors, 256 dims</text>
+          <line class="ln" x1="225" y1="312" x2="528" y2="312" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="306" text-anchor="middle">execute_sql: INSERT … VEC_FromText(?)</text>
+          <line class="ln" x1="530" y1="336" x2="683" y2="336" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="330" text-anchor="middle">INSERT, index update</text>
+          <line class="ln ret" x1="530" y1="360" x2="227" y2="360" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="354" text-anchor="middle">1 row affected (5 times)</text>
+          <line class="ln" x1="225" y1="384" x2="528" y2="384" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="378" text-anchor="middle">db.close</text>
+
+          <line class="ln" x1="225" y1="438" x2="528" y2="438" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="432" text-anchor="middle">db.connect(uri)</text>
+          <line class="ln ret" x1="530" y1="462" x2="227" y2="462" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="456" text-anchor="middle">new connection id</text>
+          <line class="ln" x1="225" y1="486" x2="373" y2="486" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="480" text-anchor="middle">embed question</text>
+          <line class="ln ret" x1="375" y1="510" x2="227" y2="510" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="300" y="504" text-anchor="middle">1 vector</text>
+          <line class="ln" x1="225" y1="534" x2="528" y2="534" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="528" text-anchor="middle">SELECT … ORDER BY VEC_DISTANCE LIMIT 2</text>
+          <line class="ln acc" x1="530" y1="558" x2="683" y2="558" marker-end="url(#lad-acc)"/>
+          <text class="sm acct halo" x="607" y="552" text-anchor="middle">walk the vector index</text>
+          <line class="ln ret" x1="685" y1="582" x2="532" y2="582" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="576" text-anchor="middle">top 2 + distances</text>
+          <line class="ln ret" x1="530" y1="606" x2="227" y2="606" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="377" y="600" text-anchor="middle">2 memories</text>
+          <line class="ln" x1="225" y1="630" x2="72" y2="630" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="147" y="624" text-anchor="middle">answer from memory</text>
+
+          <line class="ln" x1="225" y1="678" x2="528" y2="678" marker-end="url(#lad-a)"/>
+          <text class="sm mono halo" x="377" y="672" text-anchor="middle">sandbox.stop, sandbox.delete</text>
+          <line class="ln" x1="530" y1="702" x2="683" y2="702" marker-end="url(#lad-a)"/>
+          <text class="sm halo" x="607" y="696" text-anchor="middle">shut down, remove</text>
+        </svg>
+      </div>
+      <figcaption>The run in call order. Solid arrows are requests and dashed arrows are replies. The agent is the only participant that talks to both the embedding model and the MCP server. The plugin never converts text to vectors, and it only sees each vector as a SQL parameter. Turn 2 opens a new connection, so the recall comes from what the database stored, not from the session.</figcaption>
+    </figure>
+<div class="tablewrap">
+      <table class="dist">
+        <thead><tr><th>question</th><th>memory at rank 1</th><th class="n">dist</th></tr></thead>
+        <tbody>
+          <tr><td>My vector index build on a big table is crawling. What should I check first?</td><td>Raise mhnsw_max_cache_size to at least 1 GB</td><td class="n good">0.263</td></tr>
+          <tr><td>Do developers need a GitHub token to install the MariaDB agent plugin?</td><td>The repositories are public, so no token is needed</td><td class="n good">0.178</td></tr>
+          <tr><td>Which MariaDB version should the launch page use in its examples?</td><td>The repositories are public (the expected "12.3 is the current LTS" came second, 0.303)</td><td class="n">0.267</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The right memory comes first for 2 of the 3 questions and is in the top 2 for all 3. The plugin has no embedding step, so the agent calls the embedding model itself and passes each vector as a SQL parameter. The MCP server also refuses to read SQL files from directories that weren't allowed with <code>mcp.setup</code>, so the agent sends its SQL inline. That refusal is a sensible default for an agent tool.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Run it yourself</div>
+    <h2>Use Docker, or ask your agent</h2>
+    <p>Two Docker commands run the example on the current long-term support release:</p>
+<div class="term">
+      <div class="term-head"><span>shell</span><button class="copy" id="copy-run" data-target="run">Copy</button></div>
+<pre id="run">docker run -d --name agent-memory -e MARIADB_ROOT_PASSWORD=demo -e MARIADB_DATABASE=demo mariadb:12.3
+docker exec -i agent-memory mariadb -uroot -pdemo demo --table &lt; agent_memory.sql</pre>
+    </div>
+    <p>Wait a few seconds after the first command for the server to start, and remove the container with <code>docker rm -f agent-memory</code> when you're done. With the plugin installed, you can hand the script to your agent with one sentence instead:</p>
+<div class="term">
+      <div class="term-head"><span>prompt</span><button class="copy" id="copy-prompt" data-target="prompt">Copy</button></div>
+<pre id="prompt">Spin up MariaDB 11.8 and 12.3 sandboxes, run agent_memory.sql on both, show me the results, then delete the sandboxes.</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What this proves</div>
+    <h2>One table carries the whole memory loop, with known costs</h2>
+    <ul class="facts">
+      <li><strong>One row:</strong> the note, the agent that owns it, its embedding, and its history live together, so there's no sync job between a relational store and a vector store.</li>
+      <li><strong>One language:</strong> recall is <code>ORDER BY VEC_DISTANCE(...) LIMIT k</code>, and any developer who reads SQL can follow it.</li>
+      <li><strong>One transaction:</strong> a new memory is searchable within milliseconds of commit, and a rolled-back one never shows up.</li>
+      <li><strong>One open server:</strong> everything here runs on the community server from public packages, with no license key or managed service.</li>
+      <li><strong>The costs:</strong> filtered search trades latency for recall, concurrent writes slow reads, and history shares the vector index. This page doesn't cover 1 million rows or questions-as-queries at scale.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="eyebrow">Appendix &middot; internal review &middot; 2026-10-15</div>
+    <h2>Answers to the 14 review questions</h2>
+    <p>Each item shows what was tested, the result, and what is still open. Items 1 to 3 decide what the opener can claim.</p>
+
+    <div class="log">
+      <div class="group">Resolve</div>
+
+      <div class="item"><span class="num">1</span><div class="body">
+        <div class="head"><h3>Release dates and the external path</h3><span class="pill warn">PARTLY</span></div>
+        <ul>
+          <li>Both repositories are public now. An anonymous GitHub API call returns 200 for <code>mariadb-corporation/mariadb-shell</code> and <code>mariadb/ai-plugins</code>. No token is needed. The "Private repository" note in the plugin README (26.10.0) is out of date.</li>
+          <li>Every release is still marked Pre-release: <code>ai-plugins</code> v26.10.3 (2026-10-15) and <code>mariadb-shell</code> v26.10.1 (2026-10-08). The launcher falls back to the newest prerelease, so installation works today.</li>
+          <li>Open: whether a stable release ships before Nov 3. The repositories don't say. Ask the plugin and shell owners.</li>
+          <li>Recommendation: lead externally with the SQL and Docker path. It needs no pre-release software. Make the agent path the second beat until stable releases exist.</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">2</span><div class="body">
+        <div class="head"><h3>Exact statements and raw output on every version</h3><span class="pill pass">DONE</span></div>
+        <ul>
+          <li>Statements: the snippet as written, then <code>SELECT id, note, ROUND(VEC_DISTANCE_COSINE(embedding, VEC_FromText('[0.95, 0.05, 0]')), 4) AS dist FROM agent_memory ORDER BY dist;</code>, then <code>EXPLAIN</code> of the snippet's query, <code>SHOW CREATE TABLE</code>, and <code>SHOW GLOBAL VARIABLES LIKE 'mhnsw%'</code>.</li>
+          <li>Run with <code>mariadb-shell --sql --table -f</code> on 11.8.9, 12.3.3, and 13.1.1. The raw transcripts are in the evidence files below.</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">3</span><div class="body">
+        <div class="head"><h3>What <code>type = index</code> means, and proof of index use</h3><span class="pill pass">DONE</span></div>
+        <ul>
+          <li>For a normal B-tree, <code>type = index</code> means a full index scan. For a vector index, it means the optimizer reads rows in distance order from the HNSW graph and stops at the <code>LIMIT</code>, which is why <code>rows</code> shows 10. On its own, that line is not proof.</li>
+          <li>The proof is the counters at 100,000 rows: <code>Handler_read_rnd_next</code> 11 against 100,012, and 31 InnoDB pages against 11,145. The scan's plan shows <code>ALL</code> and <code>Using filesort</code>. Results matched on all three versions.</li>
+          <li>On 13.1.1, the new <code>INFORMATION_SCHEMA.VECTOR_INDEXES</code> view reports 100,000 nodes and 384 dimensions for the index.</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">4</span><div class="body">
+        <div class="head"><h3>Version facts</h3><span class="pill pass">DONE</span></div>
+        <ul>
+          <li>Vector preview: 11.6.0-vector, 29 July 2024. First release with vectors: 11.7.1 (RC), 21 Nov 2024. First GA: 11.7.2 (rolling), 13 Feb 2025. First LTS: 11.8.2 GA, 4 Jun 2025.</li>
+          <li>Enterprise Server: backported to 11.4.5-3. Enterprise Server 11.8 is GA from 11.8.3-1, 22 Oct 2025.</li>
+          <li>12.3 is the current LTS (12.3.3 GA, 24 Aug 2026). The docs list 13.0.1 as an RC and have no 13.1 release notes yet, so don't headline 13.1.1.</li>
+          <li>The snippet's behavior is identical from 11.8.9 to 13.1.1, and so are the four <code>mhnsw_*</code> defaults. 12.3 adds faster distance calculations (MDEV-36205). 13.1 adds <code>INFORMATION_SCHEMA.VECTOR_INDEXES</code> (MDEV-34805).</li>
+          <li>Source: the local <code>mariadb-docs</code> repository, commit cc40a6916 (13 Oct 2026).</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">5</span><div class="body">
+        <div class="head"><h3>Which names and versions are public</h3><span class="pill warn">PARTLY</span></div>
+        <ul>
+          <li>Public: "MariaDB AI Plugins" is the title of ai-plugins.mariadb.org. The <code>dev@mariadb</code> install name, the repository names, and the version tags are public on GitHub.</li>
+          <li>The versions are public pre-releases. Pinning 26.10.0 or 26.9.5 in launch copy will date it fast, so name the product and leave the version out.</li>
+        </ul>
+      </div></div>
+
+      <div class="group">Explore</div>
+
+      <div class="item"><span class="num">6</span><div class="body">
+        <div class="head"><h3>Scale test with real embeddings</h3><span class="pill pass">DONE AT 100K</span></div>
+        <ul>
+          <li>Done: 100,000 real embeddings at 384 dimensions (MiniLM) and at 1,536 dimensions (OpenAI ada-002), on 11.8.9 and 12.3.3, with 250 held-out queries. On 12.3.3 at the default <code>ef_search</code> of 20: recall@10 of 0.988 and 0.979, with p99 of 0.89 ms and 1.65 ms. Exact scans took 45 ms and 138 ms at p50. The full tables are in Step 4 above.</li>
+          <li>Embedding step: the plugin has none. A local Ollama model (qwen3-embedding 0.6B) embedded the snippet's notes and question, and the retrieval worked.</li>
+          <li>Finding: the default <code>mhnsw_max_cache_size</code> is 16 MB. With that default, the 13.1.1 index build on synthetic data was only 64% done after 21 minutes. With 1 GB it finished in 218 seconds. Any public "run it yourself" at scale must set this.</li>
+          <li>Not run: 1 million rows. Cite MariaDB's published 1 million OpenAI-embedding benchmark for that scale, and label it as MariaDB's own.</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">7</span><div class="body">
+        <div class="head"><h3>Filtered search with <code>WHERE agent_id</code></h3><span class="pill warn">CAVEAT</span></div>
+        <ul>
+          <li>Plan: the vector index is still used (<code>type = index</code>, <code>key = embedding</code>, <code>Using where</code>).</li>
+          <li>Correctness: every returned row matched the filter. The query returned the full <code>LIMIT</code> of 10, even with a filter that matches 1 row in 1,000.</li>
+          <li>Synthetic data: filtered recall@10 dropped to 0.78 to 0.85, and raising <code>mhnsw_ef_search</code> didn't help. The synthetic set is a hard case: most queries target clusters with few rows for the filtered agent.</li>
+          <li>Real embeddings on 12.3.3: filtered recall@10 was 0.959 (384 dims) and 0.990 (1,536 dims) at <code>ef_search</code> 20, and 0.996 and 0.998 at 400. Higher <code>ef_search</code> costs latency. At 1,536 dims, the filtered index query's p95 (50 ms) matches an exact filtered scan (52 ms), so the exact scan is the better plan for a 10% filter at 100,000 rows.</li>
+          <li>Claim implication: "filter and search in one query" is true, with high recall on real data. Don't claim the filtered path is faster than a scan at every size. Don't make the filtered query the opener.</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">8</span><div class="body">
+        <div class="head"><h3>Transactions and live data</h3><span class="pill pass">DONE</span></div>
+        <ul>
+          <li>Isolation, tested on 11.8.9: during an open transaction, the writer's search included its new row and another session's search did not. After <code>ROLLBACK</code>, the row was gone from search.</li>
+          <li>Under load (1,536 dims, 60 seconds, 4 readers, about 18.5 inserts per second): another session found 99.7% to 99.8% of new rows as the top search result, on average 30 to 33 ms after commit, including the prober's own polling. The few misses were search misses, not visibility gaps.</li>
+          <li>Cost: concurrent writes cut read throughput from about 2,800 to 3,000 reads/s down to 524 to 708 reads/s, and raised the read p99 from about 4.5 ms to 29 to 33 ms. Inserts took 13 to 16 ms at p50, including the index update.</li>
+          <li>Claim implication: "same live data, searchable within milliseconds of commit" is supported. "No impact on reads" is not.</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">9</span><div class="body">
+        <div class="head"><h3>The 8 "not yet shown" ledger claims</h3><span class="pill open">NEEDS INPUT</span></div>
+        <ul><li>The ledger wasn't shared with this run. Send the 8 claims, and each one can be mapped to plugin tool calls.</li></ul>
+      </div></div>
+
+      <div class="item"><span class="num">10</span><div class="body">
+        <div class="head"><h3>The agent's own memory through the MCP server</h3><span class="pill pass">DONE</span></div>
+        <ul>
+          <li>Claude Code stored 5 memories with <code>db.execute_sql</code>, closed the connection, and recalled them by meaning on a new one. The expected memory came first for 2 of 3 questions and was in the top 2 for all 3 (Step 8 above).</li>
+          <li>The embedding came from Ollama, outside the plugin. Small vectors (256 dimensions) keep each MCP call short.</li>
+        </ul>
+      </div></div>
+
+      <div class="group">Alter</div>
+
+      <div class="item"><span class="num">11</span><div class="body">
+        <div class="head"><h3>Lead with the SQL or the agent prompt</h3><span class="pill open">DECISION</span></div>
+        <ul><li>Recommendation: lead with the SQL. It runs on GA software today, and the agent prompt depends on pre-release tools (item 1). Use the agent run as the second beat: "your agent can do this too."</li></ul>
+      </div></div>
+
+      <div class="item"><span class="num">12</span><div class="body">
+        <div class="head"><h3>A real differentiator against pgvector</h3><span class="pill warn">USE WITH SCOPE</span></div>
+        <ul>
+          <li>Parity points don't differentiate. pgvector also has one-table vectors, transactions, and filters. "No extension" is weak, because most managed PostgreSQL services ship pgvector.</li>
+          <li>The differentiator holds: "ask what the agent knew at any past moment, in one vector query, with history the server keeps for you." It ran on 12.3.3 at 20,000 memories with up to 200,000 history rows. Recall stayed at 0.974 or higher for the past-state query, with p99 under 18 ms. PostgreSQL 18.6 and the development docs list system-versioned tables (T180) as unsupported.</li>
+          <li>Scope it: history shares the vector index. At 10 versions per memory, current-state recall fell to 0.922 and p99 rose to 69 ms. Vector indexes can't use history partitions (error 1506). Say "built-in memory history", and pair it with a history retention policy (<code>DELETE HISTORY</code>). Don't say "free".</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">13</span><div class="body">
+        <div class="head"><h3>Canonical names and capitalization</h3><span class="pill open">DECISION</span></div>
+        <ul>
+          <li>In use today: "MariaDB AI Plugins" (DevHub title), "MariaDB plugin for Claude Code" (plugin README), "MariaDB Shell" (release titles), <code>mariadb-shell</code> (binary), and "a MariaDB Shell-based MCP server" (repository description).</li>
+          <li>Flag: <code>mariadb-shell --help</code> prints an Oracle copyright line. Check how that reads before the shell gets a launch spotlight.</li>
+        </ul>
+      </div></div>
+
+      <div class="item"><span class="num">14</span><div class="body">
+        <div class="head"><h3>Does the release change the snippet?</h3><span class="pill pass">DONE</span></div>
+        <ul>
+          <li>No syntax changes from 11.8 to 13.1. The default metric is still Euclidean, so keep <code>DISTANCE=cosine</code> explicit. The maximum is 16,383 dimensions.</li>
+          <li>Optional idiom change: <code>VEC_DISTANCE</code> fails with error 4206 when the column has no vector index. <code>VEC_DISTANCE_COSINE</code> works with or without one, which is safer for copy-paste.</li>
+        </ul>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Evidence files</div>
+    <h2>Raw output from every run</h2>
+    <div class="files">
+      <a href="../01-snippet/snippet.sql">snippet.sql</a>
+      <a href="../01-snippet/results/snippet-11.8.9.txt">snippet 11.8.9</a>
+      <a href="../01-snippet/results/snippet-12.3.3.txt">snippet 12.3.3</a>
+      <a href="../01-snippet/results/snippet-13.1.1.txt">snippet 13.1.1</a>
+      <a href="../02-synthetic-100k/load.sql">load.sql</a>
+      <a href="../02-synthetic-100k/bench.sql">bench.sql</a>
+      <a href="../02-synthetic-100k/filter.sql">filter.sql</a>
+      <a href="../02-synthetic-100k/results/bench-11.8.9.txt">bench 11.8.9</a>
+      <a href="../02-synthetic-100k/results/bench-12.3.3.txt">bench 12.3.3</a>
+      <a href="../02-synthetic-100k/results/bench-13.1.1.txt">bench 13.1.1</a>
+      <a href="../02-synthetic-100k/results/filter-11.8.9.txt">filter 11.8.9</a>
+      <a href="../02-synthetic-100k/results/filter-12.3.3.txt">filter 12.3.3</a>
+      <a href="../02-synthetic-100k/results/filter-13.1.1.txt">filter 13.1.1</a>
+      <a href="../02-synthetic-100k/results/warm-latency.txt">warm latency</a>
+      <a href="../02-synthetic-100k/results/efsearch-12.3.3.txt">ef_search 12.3.3</a>
+    </div>
+    <h3>Real embeddings and mixed load</h3>
+    <div class="files">
+      <a href="../03-real-embeddings/prep.py">prep.py</a>
+      <a href="../03-real-embeddings/prep_extra.py">prep_extra.py</a>
+      <a href="../03-real-embeddings/load.sql.tpl">load template</a>
+      <a href="../03-real-embeddings/bench.sql.tpl">bench template</a>
+      <a href="../03-real-embeddings/mixed-setup.sql">mixed-setup.sql</a>
+      <a href="../03-real-embeddings/mixed-procs.sql">mixed-procs.sql</a>
+      <a href="../03-real-embeddings/mixed-report.sql">mixed-report.sql</a>
+      <a href="../04-embedding-demo/embed_demo.py">embed_demo.py</a>
+      <a href="../03-real-embeddings/results/build-11.8.9.txt">build 11.8.9</a>
+      <a href="../03-real-embeddings/results/build-12.3.3.txt">build 12.3.3</a>
+      <a href="../03-real-embeddings/results/bench-11.8.9-wiki384.txt">bench 11.8.9 384</a>
+      <a href="../03-real-embeddings/results/bench-11.8.9-dbpedia1536.txt">bench 11.8.9 1,536</a>
+      <a href="../03-real-embeddings/results/bench-12.3.3-wiki384.txt">bench 12.3.3 384</a>
+      <a href="../03-real-embeddings/results/bench-12.3.3-dbpedia1536.txt">bench 12.3.3 1,536</a>
+      <a href="../03-real-embeddings/results/mixed-11.8.9-20rps.txt">mixed 11.8.9</a>
+      <a href="../03-real-embeddings/results/mixed-11.8.9-readonly.txt">read-only 11.8.9</a>
+      <a href="../03-real-embeddings/results/mixed-12.3.3-20rps.txt">mixed 12.3.3</a>
+      <a href="../03-real-embeddings/results/mixed-12.3.3-readonly.txt">read-only 12.3.3</a>
+      <a href="../03-real-embeddings/results/mixed-misses-12.3.3.txt">probe misses</a>
+      <a href="../04-embedding-demo/results/embed-demo-12.3.3.txt">embedding demo</a>
+      <a href="../04-embedding-demo/step2-proof.sql">step2-proof.sql</a>
+      <a href="../04-embedding-demo/ask_llm.py">ask_llm.py</a>
+      <a href="../04-embedding-demo/results/step2-proof-12.3.3.txt">Step 2 SQL output</a>
+      <a href="../04-embedding-demo/results/step2-llm-decisions.txt">Step 2 LLM decisions</a>
+    </div>
+    <h3>Time travel and the agent's memory</h3>
+    <div class="files">
+      <a href="../05-time-travel/prep_tt.py">prep_tt.py</a>
+      <a href="../05-time-travel/tt-setup.sql">tt-setup.sql</a>
+      <a href="../05-time-travel/tt-procs.sql">tt-procs.sql</a>
+      <a href="../05-time-travel/tt-run.sh">tt-run.sh</a>
+      <a href="../05-time-travel/results/timetravel-12.3.3.txt">time travel 12.3.3</a>
+      <a href="../05-time-travel/results/tt-partition-12.3.3.txt">partition test 12.3.3</a>
+      <a href="../06-agent-memory-loop/embed.py">embed.py</a>
+      <a href="../06-agent-memory-loop/results/agent-memory-loop.txt">agent memory loop</a>
+    </div>
+    <p class="small">Every script and raw result is in this repository. The top-level README explains how to rerun each stage and how to download the source datasets.</p>
+  </section>
+
+  <footer>Tested 2026-10-15 by Claude Code with the MariaDB AI Plugins (dev@mariadb 26.10.0, mariadb-shell 26.9.5) in local sandboxes running MariaDB 11.8.9, 12.3.3, and 13.1.1 on an Apple M4 Pro. Real-embedding and mixed-load runs used 11.8.9 and 12.3.3, and the time-travel and agent-memory runs used 12.3.3, all on the same day. All sandboxes were deleted after the runs.</footer>
+</main>
+
+<script>
+document.querySelectorAll("button.copy").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var el = document.getElementById(b.dataset.target);
+    var text = el.innerText;
+    function done() { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500); }
+    function fallback() { var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected"; }
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+  });
+});
+</script>

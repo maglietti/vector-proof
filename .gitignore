@@ -1,0 +1,14 @@
+# Downloaded datasets (fetch with data/download.sh)
+data/*.parquet
+data/dbpedia/
+
+# Generated load files (rebuild with run.sh prep and tt-run.sh prep)
+03-real-embeddings/load/
+03-real-embeddings/gen/
+05-time-travel/load/
+
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store

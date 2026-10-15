@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="370" viewBox="0 0 760 370" role="img" aria-label="Architecture: Claude Code calls the mariadb-shell MCP server from the MariaDB AI Plugins. Its sandbox tools start and stop local MariaDB server processes, and its db tools send SQL to them. Ollama turns text into vectors for the agent. Inside MariaDB, one agent_memory table holds notes, vectors, and history rows, all covered by one vector index.">
+          <defs>
+            <marker id="arch-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="arch-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkacc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+<style>
+  :root { --fg: #14232b; --muted: #55666f; --bg: #f6f8f9; --panel: #eaf0f2; --panel-line: #b9c7cd; --accent: #0a6f86; --accent-soft: #d6ecf1; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e3ecef; --muted: #93a6ae; --bg: #0c1519; --panel: #13232a; --panel-line: #34505a; --accent: #4fc3dc; --accent-soft: #0f2f38; } }
+  svg { color: var(--fg); background: var(--bg); }
+  text { fill: currentColor; font: 12px "Public Sans", "Helvetica Neue", Arial, sans-serif; }
+  .mono { font-family: "JetBrains Mono", Menlo, monospace; font-size: 11.5px; }
+  .t { font-weight: 600; font-size: 13px; } .sm { font-size: 11px; }
+  .mut { fill: var(--muted); } .acct { fill: var(--accent); }
+  .box { fill: var(--panel); stroke: var(--panel-line); } .plain { fill: var(--bg); stroke: var(--panel-line); }
+  .accbox { fill: var(--accent-soft); stroke: var(--accent); } .frame { fill: none; stroke: var(--muted); stroke-dasharray: 5 4; }
+  .ln { fill: none; stroke: currentColor; stroke-width: 1.3; } .ret { stroke-dasharray: 5 4; } .acc { stroke: var(--accent); stroke-width: 1.8; }
+  .life { stroke: var(--muted); stroke-dasharray: 2 4; } .band { fill: var(--panel); opacity: 0.55; }
+  .halo { paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+  .mk { fill: currentColor; } .mkacc { fill: var(--accent); }
+</style>
+          <rect class="box" x="20" y="150" width="160" height="70" rx="6"/>
+          <text class="t" x="100" y="180" text-anchor="middle">Claude Code</text>
+          <text class="sm mut" x="100" y="198" text-anchor="middle">the agent</text>
+          <rect class="plain" x="20" y="290" width="160" height="60" rx="6"/>
+          <text class="t" x="100" y="316" text-anchor="middle">Ollama</text>
+          <text class="sm mono mut" x="100" y="334" text-anchor="middle">qwen3-embedding 0.6B</text>
+          <line class="ln" x1="60" y1="220" x2="60" y2="288" marker-end="url(#arch-a)"/>
+          <text class="sm" x="66" y="258">text</text>
+          <line class="ln ret" x1="140" y1="290" x2="140" y2="222" marker-end="url(#arch-a)"/>
+          <text class="sm" x="134" y="258" text-anchor="end">vector</text>
+
+          <rect class="frame" x="250" y="20" width="230" height="330" rx="8"/>
+          <text class="t" x="365" y="42" text-anchor="middle">MariaDB AI Plugins</text>
+          <text class="sm mono mut" x="365" y="58" text-anchor="middle">dev@mariadb</text>
+          <rect class="plain" x="265" y="72" width="200" height="36" rx="4"/>
+          <text class="sm" x="365" y="94" text-anchor="middle">SQL skills, from the docs</text>
+          <rect class="box" x="265" y="122" width="200" height="214" rx="6"/>
+          <text class="t" x="365" y="144" text-anchor="middle">mariadb-shell</text>
+          <text class="sm mono mut" x="365" y="160" text-anchor="middle">MCP server · stdio</text>
+          <rect class="plain" x="280" y="172" width="170" height="44" rx="4"/>
+          <text class="mono" x="365" y="190" text-anchor="middle">db.*</text>
+          <text class="sm mut" x="365" y="206" text-anchor="middle">connect · execute_sql · close</text>
+          <rect class="plain" x="280" y="226" width="170" height="44" rx="4"/>
+          <text class="mono" x="365" y="244" text-anchor="middle">sandbox.*</text>
+          <text class="sm mut" x="365" y="260" text-anchor="middle">deploy · stop · delete</text>
+          <rect class="plain" x="280" y="280" width="170" height="44" rx="4"/>
+          <text class="mono" x="365" y="298" text-anchor="middle">mcp.setup</text>
+          <text class="sm mut" x="365" y="314" text-anchor="middle">allowed connections, paths</text>
+
+          <path class="ln" d="M265,90 H100 V148" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="182" y="84" text-anchor="middle">loaded as skills</text>
+          <line class="ln" x1="180" y1="178" x2="263" y2="178" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="222" y="171" text-anchor="middle">tool call</text>
+          <line class="ln ret" x1="265" y1="194" x2="182" y2="194" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="222" y="210" text-anchor="middle">result</text>
+
+          <rect class="frame" x="540" y="20" width="200" height="330" rx="8"/>
+          <text class="t" x="640" y="42" text-anchor="middle">MariaDB server</text>
+          <text class="sm mono mut" x="640" y="58" text-anchor="middle">mariadbd · 11.8 / 12.3 / 13.1</text>
+          <rect class="box" x="555" y="72" width="170" height="128" rx="4"/>
+          <text class="mono t" x="640" y="92" text-anchor="middle">agent_memory</text>
+          <line class="ln" x1="555" y1="100" x2="725" y2="100" stroke="#b9c7cd"/>
+          <text class="mono" x="568" y="120">id, agent_id, note</text>
+          <text class="mono acct" x="568" y="142">embedding VECTOR(n)</text>
+          <text class="mono mut" x="568" y="164">row_start, row_end</text>
+          <text class="sm mut" x="568" y="184">system versioning</text>
+          <rect class="accbox" x="555" y="226" width="170" height="44" rx="4"/>
+          <text class="mono t acct" x="640" y="244" text-anchor="middle">VECTOR INDEX</text>
+          <text class="sm" x="640" y="260" text-anchor="middle">MHNSW graph · cosine</text>
+          <rect class="frame" x="555" y="296" width="170" height="40" rx="4"/>
+          <text class="sm" x="640" y="313" text-anchor="middle">history rows</text>
+          <text class="sm mut" x="640" y="328" text-anchor="middle">same table, same index</text>
+          <line class="ln" x1="620" y1="200" x2="620" y2="224" marker-end="url(#arch-a)"/>
+          <text class="sm mut" x="628" y="216">updated on write</text>
+          <line class="ln acc" x1="700" y1="296" x2="700" y2="272" marker-end="url(#arch-acc)"/>
+
+          <line class="ln" x1="450" y1="194" x2="553" y2="194" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="502" y="186" text-anchor="middle">SQL over TCP</text>
+          <line class="ln" x1="450" y1="248" x2="538" y2="248" marker-end="url(#arch-a)"/>
+          <text class="sm halo" x="494" y="240" text-anchor="middle">start · stop</text>
+        </svg>
