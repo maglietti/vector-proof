@@ -17,13 +17,14 @@ Each numbered directory is one stage. Every stage has its scripts at the top lev
 | `05-time-travel/` | Vector search on a system-versioned table as history grows. The candidate differentiator against pgvector. |
 | `06-agent-memory-loop/` | The agent storing and recalling its own memory through the MariaDB AI Plugins MCP server. |
 | `writeup/` | The write-up in HTML and Markdown, its five diagrams as SVG files, and the script that builds the Markdown and SVG files from the HTML. See [The write-up](#the-write-up). |
+| `workflow/` | Nine prompts and a shared rules file that rebuild every stage and the write-up with Claude Code and the MariaDB AI Plugins. Start at [workflow/README.md](workflow/README.md). |
 
 ## The write-up
 
 `writeup/` holds the write-up that presents these results. Its evidence links point at the raw results in the stage folders of this repository.
 
 - [writeup/agent-memory-proof.html](writeup/agent-memory-proof.html) is the source. Open it in a browser. It follows the system light or dark theme.
-- [writeup/agent-memory-proof.md](writeup/agent-memory-proof.md) is the same content in Markdown, with one line per paragraph so the text reflows at any width.
+- [writeup/README.md](writeup/README.md) is the same content in Markdown, with one line per paragraph so the text reflows at any width.
 - [writeup/diagrams/](writeup/diagrams/) holds the five diagrams as standalone SVG files with their own light and dark styles: [agent loop](writeup/diagrams/01-agent-loop.svg), [actor model](writeup/diagrams/02-actor-model.svg), [schema](writeup/diagrams/03-schema.svg), [architecture](writeup/diagrams/04-architecture.svg), and [call-flow ladder](writeup/diagrams/05-call-flow-ladder.svg).
 - [writeup/export.py](writeup/export.py) rebuilds the Markdown and SVG files from the HTML. It fails if any evidence link points at a missing file. Run it after you edit the HTML.
 
