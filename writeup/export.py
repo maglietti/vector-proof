@@ -7,7 +7,7 @@
 Usage: uv run export.py
 
 Reads agent-memory-proof.html next to this script, which is the source of truth, and writes:
-  agent-memory-proof.md     the same content as Markdown, one line per paragraph
+  README.md                 the same content as Markdown, one line per paragraph
   diagrams/*.svg            each inline diagram as a standalone SVG with its own light and dark styles
 Fails if any evidence link in the page points at a missing file in the stage folders.
 """
@@ -150,5 +150,5 @@ for block in md:
         out.append(block)
 text = "\n\n".join(out) + "\n"
 text = text.replace(f"# {title}", f"# {title}", 1)
-(HERE / "agent-memory-proof.md").write_text(text)
+(HERE / "README.md").write_text(text)
 print("wrote md,", len(svg_files), "svg")
